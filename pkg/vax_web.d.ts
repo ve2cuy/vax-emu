@@ -5,6 +5,22 @@ export class Emulator {
     free(): void;
     [Symbol.dispose](): void;
     /**
+     * Branche une image sur le lecteur MSCP `unit` (DUA0-DUA3), type `drive` (RA82, RRD40...).
+     */
+    attach_disk(unit: number, drive: string, disk: any): void;
+    /**
+     * Capacité (blocs de 512 octets) d'un type de lecteur.
+     */
+    static drive_blocks(name: string): number;
+    /**
+     * Types de lecteurs offerts (noms séparés par des virgules).
+     */
+    static drive_types(): string;
+    /**
+     * Écrit les tampons de toutes les images.
+     */
+    flush_disks(): void;
+    /**
      * Contenu de la NVR (1 Ko) sauvegardé par la page.
      */
     load_nvr(data: Uint8Array): void;
@@ -55,6 +71,10 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_emulator_free: (a: number, b: number) => void;
+    readonly emulator_attach_disk: (a: number, b: number, c: number, d: number, e: any) => [number, number];
+    readonly emulator_drive_blocks: (a: number, b: number) => number;
+    readonly emulator_drive_types: () => [number, number];
+    readonly emulator_flush_disks: (a: number) => void;
     readonly emulator_load_nvr: (a: number, b: number, c: number) => void;
     readonly emulator_load_rom: (a: number, b: number, c: number, d: number) => void;
     readonly emulator_new: (a: number) => number;
@@ -70,6 +90,8 @@ export interface InitOutput {
     readonly emulator_type_bytes: (a: number, b: number, c: number) => void;
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
+    readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+    readonly __externref_table_dealloc: (a: number) => void;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_start: () => void;
 }

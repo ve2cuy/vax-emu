@@ -1,12 +1,12 @@
 # Émulateur VAX 4000
 
 Un émulateur VAX qui s'exécute dans votre fureteur, écrit en Rust et compilé en
-WebAssembly. Le but : installer et faire tourner **OpenVMS VAX**, comme sur un VAX 4000
+WebAssembly. Il installe et fait tourner **OpenVMS VAX**, comme sur un VAX 4000
 modèle 200.
 
 **L'essayer : <https://ve2cuy.github.io/vax-emu/>** · [English version](README.md)
 
-![La console du KA655 après ses autotests](docs/screenshots/console.png)
+![OpenVMS VAX V7.1 dans le fureteur](docs/screenshots/vms.png)
 
 ## État
 
@@ -14,36 +14,54 @@ modèle 200.
   chaînes, files, gestion de la mémoire, exceptions et interruptions). Il réussit le
   diagnostic DEC *Hardware Core Instruction* (EHKAA).
 - **Machine** : KA655 (MicroVAX 3900 / VAXserver 3900) — mémoire jusqu'à 512 Mo, ligne
-  série de la console, temporisateurs, horloge, adaptateur Qbus. Le microprogramme de la
-  console fait ses autotests et donne l'invite `>>>`.
-- **À venir** : disques MSCP (amorcer le CD d'OpenVMS, l'installer sur un disque gardé
-  dans le fureteur), puis l'identité du VAX 4000-200 (KA660).
+  série de la console, temporisateurs, horloge, adaptateur Qbus.
+- **Disques** : contrôleur MSCP à quatre lecteurs (DUA0-DUA3) : disques RA et un CD-ROM
+  RRD40. **OpenVMS VAX V7.1 s'installe depuis son CD**, démarre et accepte les connexions.
+- **À venir** : l'identité du VAX 4000-200 (KA660), Ethernet.
 
 ## Pour commencer
 
-1. Téléchargez le ROM de la console du KA655,
-   [`ka655x.bin`](https://github.com/simh/simh/raw/master/VAX/ka655x.bin), du projet
-   [SIMH](https://github.com/simh/simh).
-2. Ouvrez l'émulateur, puis **Machine › Charger un fichier ROM…** et choisissez
-   `ka655x.bin`. Le ROM reste dans votre fureteur (il n'est jamais envoyé) et resservira à
-   votre prochaine visite.
-3. Les autotests défilent de 40 à 03, puis l'invite de la console `>>>` apparaît. Cliquez
-   sur le terminal et tapez, par exemple :
-
-```
->>> SHOW MEMORY
->>> SHOW VERSION
->>> HELP
-```
+1. Ouvrez l'émulateur. Le ROM de la console du KA655
+   ([`ka655x.bin`](https://github.com/simh/simh/raw/master/VAX/ka655x.bin), du projet
+   [SIMH](https://github.com/simh/simh)) est téléchargé automatiquement la première fois;
+   vous pouvez aussi charger votre copie dans **Machine › Charger un fichier ROM…**. Il
+   reste dans votre fureteur et n'est jamais envoyé.
+2. Les autotests défilent de 40 à 03, puis l'invite de la console `>>>` apparaît. Cliquez
+   sur le terminal et tapez, par exemple, `SHOW DEVICE`, `SHOW MEMORY` ou `HELP`.
 
 Le bouton **Arrêt** (ou Ctrl+P, quand la console le permet) arrête le processeur et
 revient à l'invite `>>>`, comme la touche BREAK d'un vrai terminal de console.
 
+## Disques et OpenVMS
+
+Le menu **Disques** gère les quatre lecteurs. Les images sont gardées dans le stockage
+privé du fureteur (OPFS) et ne quittent jamais votre ordinateur; ce que le VAX y écrit
+est conservé.
+
+- **Importer…** copie une image de disque (`.dsk`) ou de CD (`.iso`) de votre ordinateur.
+- **Vierge** crée un disque vide du type choisi (RA82, RA92...).
+- Le bouton de téléchargement remet une image sur votre ordinateur; **Éjecter** la retire.
+
+Pour installer OpenVMS VAX (éteignez le VAX pour changer les disques) :
+
+1. **DUA0** : un RA82 ou un RA92 vierge. **DUA1** : l'image du CD d'OpenVMS VAX, par
+   exemple la V7.1 (`AG-QSBWB-BE`) de l'[archive de VaxHaven](https://www.vaxhaven.com/CD_Image_Archive).
+2. Allumez, puis à `>>>` tapez `B DUA1`. Donnez la date, répondez `YES`, puis restaurez
+   le système sur le disque :
+   `$ BACKUP DUA1:VMS071.B/SAVE_SET DUA0:`
+3. Appuyez sur **Arrêt**, puis `B DUA0` : la procédure d'installation pose ses questions
+   (options, mots de passe, nom du nœud, fuseau horaire) et redémarre.
+4. Une fois installé, `B DUA0` amorce OpenVMS; appuyez sur Retour pour l'invite
+   `Username:`. Sans clés de licence (PAK), OpenVMS permet la connexion sur le terminal
+   de la console (OPA0).
+
+Les mots de passe d'OpenVMS ne peuvent contenir que des lettres, des chiffres, `$` et `_`.
+
 ## Licence et remerciements
 
-Licence Apache 2.0. Le processeur et la console sont une traduction en Rust du simulateur
-VAX de [SIMH](https://github.com/simh/simh) de Robert M Supnik (licence de type MIT, voir
-[NOTICE](NOTICE)). Terminal : [xterm.js](https://xtermjs.org/) (MIT).
+Licence Apache 2.0. Le processeur, la console et le contrôleur de disques sont une
+traduction en Rust de [SIMH](https://github.com/simh/simh) de Robert M Supnik (licence de
+type MIT, voir [NOTICE](NOTICE)). Terminal : [xterm.js](https://xtermjs.org/) (MIT).
 
 Le microprogramme et les logiciels de DEC (ROM de la console, diagnostics, OpenVMS) sont
 © Digital Equipment Corporation et ses successeurs; aucun ne fait partie de ce projet.

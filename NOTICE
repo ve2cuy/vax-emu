@@ -6,7 +6,9 @@ Licensed under the Apache License, Version 2.0 (see the LICENSE file).
 -------------------------------------------------------------------------------
 Portions of this software are derived from SIMH (https://github.com/simh/simh),
 in particular the VAX simulator (VAX/vax_cpu.c, vax_cpu1.c, vax_mmu.c,
-vax_mmu.h, vax_defs.h, vax_sys.c and related files), translated to Rust.
+vax_mmu.h, vax_defs.h, vax_sys.c, vax_sysdev.c, vax_io.c, vax_stddev.c and related
+files) and the MSCP disk controller (PDP11/pdp11_rq.c, pdp11_uqssp.h, pdp11_mscp.h),
+translated to Rust.
 Those portions remain under the following terms:
 
    Copyright (c) 1998-2019, Robert M Supnik

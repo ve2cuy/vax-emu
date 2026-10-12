@@ -2,8 +2,12 @@
 // l'interface reste fluide. Le temps simulé suit le temps réel; si l'hôte ne suit pas, le
 // retard est abandonné au-delà de 200 ms (le VAX ralentit, sans rattrapage brutal).
 //
-// Messages reçus : start {rom, nvr, mem, server}, input {bytes}, break, stop.
-// Messages envoyés : ready, output {bytes}, stats {mips, simMs}, nvr {bytes}, stopped {reason}, error {msg}.
+// Messages reçus : start {rom, nvr, mem, server, disks}, input {bytes}, break, stop.
+// Messages envoyés : ready, output {bytes}, stats {mips, simMs}, nvr {bytes}, stopped {reason},
+// closed (images fermées après stop), error {msg}.
+//
+// Disques : fichiers de l'OPFS (dossier « disks »), ouverts en accès synchrone et branchés
+// sur les lecteurs MSCP (disks : [{unit, drive, file}]).
 
 import init, { Emulator } from './pkg/vax_web.js';
 
@@ -17,6 +21,52 @@ let statInst = 0;
 let statTime = 0;
 let nvrTime = 0;
 let lastNvr = null;
+let handles = [];   // accès synchrones OPFS ouverts (fermés à l'arrêt)
+let flushTime = 0;
+
+/** Ouvre une image de l'OPFS et la présente à la machine (JsDisk). */
+async function openDisk(file) {
+  const root = await navigator.storage.getDirectory();
+  const dir = await root.getDirectoryHandle('disks', { create: true });
+  const fh = await dir.getFileHandle(file, { create: true });
+  const h = await fh.createSyncAccessHandle();
+  handles.push(h);
+  return {
+    read(off, buf) {
+      try {
+        buf.fill(0);
+        h.read(buf, { at: off });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    write(off, buf) {
+      try {
+        h.write(buf, { at: off });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    size() {
+      return h.getSize();
+    },
+    flush() {
+      try { h.flush(); } catch { /* rien */ }
+    },
+  };
+}
+
+function closeDisks() {
+  for (const h of handles) {
+    try {
+      h.flush();
+      h.close();
+    } catch { /* déjà fermé */ }
+  }
+  handles = [];
+}
 
 const SLICE_MS = 12; // temps de calcul au plus, par tour
 const MAX_LAG_MS = 200;
@@ -79,6 +129,10 @@ function tick() {
     nvrTime = now;
     flushNvr();
   }
+  if (now - flushTime >= 10000) {
+    flushTime = now;
+    emu.flush_disks();
+  }
   if (running) setTimeout(tick, sim >= target ? 4 : 0);
 }
 
@@ -90,7 +144,9 @@ self.onmessage = async (e) => {
         ready ??= init({ module_or_path: `pkg/vax_web_bg.wasm${version}` });
         await ready;
         if (emu) emu.free();
+        closeDisks();
         emu = new Emulator(msg.mem);
+        for (const d of msg.disks ?? []) emu.attach_disk(d.unit, d.drive, await openDisk(d.file));
         emu.load_rom(msg.rom, msg.server);
         if (msg.nvr) emu.load_nvr(msg.nvr);
         lastNvr = msg.nvr ? msg.nvr.slice() : null;
@@ -117,9 +173,12 @@ self.onmessage = async (e) => {
         running = false;
         if (emu) {
           flushNvr();
+          emu.flush_disks();
           emu.free();
           emu = null;
         }
+        closeDisks();
+        post({ type: 'closed' });
         break;
       default:
         break;

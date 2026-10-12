@@ -12,6 +12,53 @@ export class Emulator {
         wasm.__wbg_emulator_free(ptr, 0);
     }
     /**
+     * Branche une image sur le lecteur MSCP `unit` (DUA0-DUA3), type `drive` (RA82, RRD40...).
+     * @param {number} unit
+     * @param {string} drive
+     * @param {any} disk
+     */
+    attach_disk(unit, drive, disk) {
+        const ptr0 = passStringToWasm0(drive, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.emulator_attach_disk(this.__wbg_ptr, unit, ptr0, len0, disk);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * Capacité (blocs de 512 octets) d'un type de lecteur.
+     * @param {string} name
+     * @returns {number}
+     */
+    static drive_blocks(name) {
+        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.emulator_drive_blocks(ptr0, len0);
+        return ret;
+    }
+    /**
+     * Types de lecteurs offerts (noms séparés par des virgules).
+     * @returns {string}
+     */
+    static drive_types() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.emulator_drive_types();
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Écrit les tampons de toutes les images.
+     */
+    flush_disks() {
+        wasm.emulator_flush_disks(this.__wbg_ptr);
+    }
+    /**
      * Contenu de la NVR (1 Ko) sauvegardé par la page.
      * @param {Uint8Array} data
      */
@@ -132,6 +179,26 @@ function __wbg_get_imports() {
         __wbg___wbindgen_throw_41e9ee4f547fc59a: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
+        __wbg_flush_c74cf912ae8b3c0b: function(arg0) {
+            arg0.flush();
+        },
+        __wbg_read_e0af511ec87340d3: function(arg0, arg1, arg2, arg3) {
+            const ret = arg0.read(arg1, getArrayU8FromWasm0(arg2, arg3));
+            return ret;
+        },
+        __wbg_size_da844295afd33d84: function(arg0) {
+            const ret = arg0.size();
+            return ret;
+        },
+        __wbg_write_6ee0d45ca7a9a15c: function(arg0, arg1, arg2, arg3) {
+            const ret = arg0.write(arg1, getArrayU8FromWasm0(arg2, arg3));
+            return ret;
+        },
+        __wbindgen_generic_0000000000000001: function(arg0, arg1) {
+            // Cast intrinsic for `Ref(String) -> Externref`.
+            const ret = getStringFromWasm0(arg0, arg1);
+            return ret;
+        },
         __wbindgen_init_externref_table: function() {
             const table = wasm.__wbindgen_externrefs;
             const offset = table.grow(4);
@@ -176,6 +243,49 @@ function passArray8ToWasm0(arg, malloc) {
     return ptr;
 }
 
+function passStringToWasm0(arg, malloc, realloc) {
+    if (realloc === undefined) {
+        const buf = cachedTextEncoder.encode(arg);
+        const ptr = malloc(buf.length, 1) >>> 0;
+        getUint8ArrayMemory0().subarray(ptr, ptr + buf.length).set(buf);
+        WASM_VECTOR_LEN = buf.length;
+        return ptr;
+    }
+
+    let len = arg.length;
+    let ptr = malloc(len, 1) >>> 0;
+
+    const mem = getUint8ArrayMemory0();
+
+    let offset = 0;
+
+    for (; offset < len; offset++) {
+        const code = arg.charCodeAt(offset);
+        if (code > 0x7F) break;
+        mem[ptr + offset] = code;
+    }
+    if (offset !== len) {
+        if (offset !== 0) {
+            arg = arg.slice(offset);
+        }
+        ptr = realloc(ptr, len, len = offset + arg.length * 3, 1) >>> 0;
+        const view = getUint8ArrayMemory0().subarray(ptr + offset, ptr + len);
+        const ret = cachedTextEncoder.encodeInto(arg, view);
+
+        offset += ret.written;
+        ptr = realloc(ptr, len, offset, 1) >>> 0;
+    }
+
+    WASM_VECTOR_LEN = offset;
+    return ptr;
+}
+
+function takeFromExternrefTable0(idx) {
+    const value = wasm.__wbindgen_externrefs.get(idx);
+    wasm.__externref_table_dealloc(idx);
+    return value;
+}
+
 let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
 cachedTextDecoder.decode();
 const MAX_SAFARI_DECODE_BYTES = 2146435072;
@@ -188,6 +298,19 @@ function decodeText(ptr, len) {
         numBytesDecoded = len;
     }
     return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
+}
+
+const cachedTextEncoder = new TextEncoder();
+
+if (!('encodeInto' in cachedTextEncoder)) {
+    cachedTextEncoder.encodeInto = function (arg, view) {
+        const buf = cachedTextEncoder.encode(arg);
+        view.set(buf);
+        return {
+            read: arg.length,
+            written: buf.length
+        };
+    };
 }
 
 let WASM_VECTOR_LEN = 0;

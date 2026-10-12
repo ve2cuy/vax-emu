@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=e34e812b">
-  <link rel="stylesheet" href="style.css?v=e34e812b">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=b8a98e0e">
+  <link rel="stylesheet" href="style.css?v=b8a98e0e">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -47,6 +47,11 @@
       <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
       <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
       <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+      <symbol id="i-disk" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></symbol>
+      <symbol id="i-eject" viewBox="0 0 24 24"><path d="M12 5l7 8H5zM5 18h14"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     </defs>
   </svg>
 
@@ -110,6 +115,28 @@
               <p class="hint" data-i18n-html="rom.hint"></p>
               <p class="hint" data-i18n="nvr.hint"></p>
             </details>
+          </div>
+        </div>
+
+        <div class="nav-group">
+          <button type="button" class="nav-item" aria-expanded="false" aria-controls="panel-disks" data-tip="Disks" data-i18n-tip="nav.disks">
+            <svg class="chev"><use href="#i-chevron"/></svg>
+            <svg class="icon"><use href="#i-disk"/></svg>
+            <span class="label" data-i18n="nav.disks">Disks</span>
+          </button>
+          <div id="panel-disks" class="nav-panel" hidden>
+            <div id="disk-units" class="disk-units"></div>
+            <p id="disk-lock" class="hint" data-i18n="disk.locked" hidden>Power off the VAX to change the disks.</p>
+            <div id="local-disks" class="field" hidden>
+              <span data-i18n="disk.local">Local images (development)</span>
+              <div id="local-disk-list" class="local-disks"></div>
+            </div>
+            <p id="disk-usage" class="hint"></p>
+            <details class="more">
+              <summary data-i18n="more">More information</summary>
+              <p class="hint" data-i18n-html="disk.hint"></p>
+            </details>
+            <input id="disk-file" type="file" hidden>
           </div>
         </div>
 
@@ -237,7 +264,7 @@
       </div>
     </main>
   </div>
-  <script src="vendor/xterm/xterm.js?v=e34e812b"></script>
-  <script type="module" src="main.js?v=e34e812b"></script>
+  <script src="vendor/xterm/xterm.js?v=b8a98e0e"></script>
+  <script type="module" src="main.js?v=b8a98e0e"></script>
 </body>
 </html>

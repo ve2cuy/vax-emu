@@ -1118,3 +1118,20 @@ button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--error)
 .terminal .xterm:focus-within { box-shadow: 0 0 0 2px var(--accent); border-radius: 4px; }
 .stage > .status { width: auto; max-width: 100%; }
 .overlay[hidden] { display: none; }
+
+/* ---------------------------------------------------------------- VAX : disques */
+.disk-units { display: flex; flex-direction: column; gap: 10px; }
+.disk-unit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.disk-unit .row { flex-wrap: wrap; align-items: center; gap: 6px; }
+.disk-unit select { flex: 1; min-width: 6em; }
+.disk-unit .hint { overflow-wrap: anywhere; }
+.local-disks { display: flex; flex-direction: column; gap: 8px; }
+.local-disk .row { flex-wrap: wrap; gap: 4px; }
+.local-disk button { padding: 4px 8px; font-size: 0.8rem; }
