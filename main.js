@@ -802,7 +802,13 @@ async function repoIndex(kind) {
   const url = repoUrl(`${kind}/index.json`);
   let entries = repoCache.get(url);
   if (!entries) {
-    const res = await fetch(url, { cache: 'no-cache' });
+    let res;
+    try {
+      res = await fetch(url, { cache: 'no-cache' });
+    } catch {
+      // TypeError (« Failed to fetch ») : serveur injoignable, ou CORS refusé.
+      throw Object.assign(new Error(t('repo.unavailable', { url, reason: t('repo.unreachable') })), { full: true });
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const list = await res.json();
     if (!Array.isArray(list)) throw new Error(t('repo.notList'));
@@ -848,7 +854,12 @@ async function maybeGunzip(body) {
 
 async function fetchRepo(kind, entry) {
   const url = repoUrl(`${kind}/${entry.file.split('/').map(encodeURIComponent).join('/')}`);
-  const res = await fetch(url);
+  let res;
+  try {
+    res = await fetch(url);
+  } catch {
+    throw new Error(t('repo.unavailable', { url, reason: t('repo.unreachable') }));
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status} — ${url}`);
   return maybeGunzip(res.body);
 }
@@ -977,8 +988,8 @@ async function loadRepo() {
     repoSelect.replaceChildren(new Option('—', ''));
     repoSelect.disabled = true;
     repoDetail.replaceChildren();
-    const reason = e instanceof TypeError ? t('repo.unreachable') : e.message;
-    repoStatus.textContent = t('repo.unavailable', { url: repoUrl(`${kind}/index.json`), reason });
+    // repoIndex rend déjà un message complet quand le serveur est injoignable (`full`).
+    repoStatus.textContent = e.full ? e.message : t('repo.unavailable', { url: repoUrl(`${kind}/index.json`), reason: e.message });
   }
 }
 
