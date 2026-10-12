@@ -464,11 +464,27 @@ document.getElementById('rom-file').addEventListener('change', async (e) => {
 
 // ------------------------------------------------------------------ démarrage
 
+/**
+ * Développement : ROM de départ dans www/roms/local/ (exclu de Git et du site public),
+ * chargé d'office quand le fureteur n'en garde pas encore.
+ */
+async function localRom() {
+  try {
+    const r = await fetch(`roms/local/ka655x.bin${V}`);
+    if (!r.ok) return null;
+    const bytes = new Uint8Array(await r.arrayBuffer());
+    return bytes.length === ROM_SIZE ? { name: 'ka655x.bin', bytes } : null;
+  } catch {
+    return null;
+  }
+}
+
 document.documentElement.classList.remove('no-js', 'js-loading', 'js-failed');
 document.documentElement.classList.add('js-ready');
 
 const saved = await dbGet('rom');
 if (saved?.bytes) rom = { name: saved.name, bytes: new Uint8Array(saved.bytes) };
+else if ((rom = await localRom())) await dbPut('rom', rom);
 showRomInfo();
 updateButtons();
 if (rom && prefs.power) powerOn();
