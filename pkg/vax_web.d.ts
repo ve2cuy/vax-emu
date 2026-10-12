@@ -9,6 +9,14 @@ export class Emulator {
      */
     attach_disk(unit: number, drive: string, disk: any): void;
     /**
+     * Octets lus sur le lecteur `unit` depuis la mise sous tension.
+     */
+    disk_read(unit: number): number;
+    /**
+     * Octets écrits sur le lecteur `unit` depuis la mise sous tension (progression).
+     */
+    disk_written(unit: number): number;
+    /**
      * Capacité (blocs de 512 octets) d'un type de lecteur.
      */
     static drive_blocks(name: string): number;
@@ -85,6 +93,8 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_emulator_free: (a: number, b: number) => void;
     readonly emulator_attach_disk: (a: number, b: number, c: number, d: number, e: any) => [number, number];
+    readonly emulator_disk_read: (a: number, b: number) => number;
+    readonly emulator_disk_written: (a: number, b: number) => number;
     readonly emulator_drive_blocks: (a: number, b: number) => number;
     readonly emulator_drive_types: () => [number, number];
     readonly emulator_flush_disks: (a: number) => void;

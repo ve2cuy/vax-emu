@@ -447,6 +447,7 @@ function onWorkerMessage(e) {
     }
     case 'stats':
       speed.textContent = t('speed', { mips: msg.mips.toFixed(1) });
+      pilotStats(msg);
       break;
     case 'nvr':
       dbPut('nvr', msg.bytes);
@@ -1045,6 +1046,8 @@ class Pilot {
   constructor(nameKey) {
     this.nameKey = nameKey;
     this.stepKey = null;
+    this.stepTime = Date.now();
+    this.progress = '';   // détail de l'étape en cours (ex. Mo écrits par BACKUP)
     this.buf = '';
     this.answers = [];
     this.defaults = false;
@@ -1053,13 +1056,19 @@ class Pilot {
     this.cancelled = false;
   }
 
+  /** Barre de l'automatisation : étape, temps écoulé (m:ss) et détail. */
   show() {
     pilotBar.hidden = false;
-    pilotText.textContent = t('auto.running', { name: t(this.nameKey), step: this.stepKey ? t(this.stepKey) : '' });
+    const secs = Math.floor((Date.now() - this.stepTime) / 1000);
+    const time = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+    const text = t('auto.running', { name: t(this.nameKey), step: this.stepKey ? t(this.stepKey) : '' });
+    pilotText.textContent = `${text} ${time}${this.progress ? ` — ${this.progress}` : ''}`;
   }
 
   step(key) {
     this.stepKey = key;
+    this.stepTime = Date.now();
+    this.progress = '';
     this.show();
   }
 
@@ -1138,15 +1147,35 @@ class Pilot {
   }
 }
 
+// Octets que BACKUP écrit sur DUA0 en restaurant VMS071.B (mesuré : commande io d'expect).
+const BACKUP_BYTES = 29452288;
+let pilotClock = 0;
+
+/** Statistiques du fil (une fois par seconde) : progression de l'étape en cours. */
+function pilotStats(msg) {
+  if (!pilot || !msg.io) return;
+  if (pilot.stepKey === 'auto.step.backup') {
+    const written = msg.io[0][1];
+    pilot.progress = t('auto.progress.backup', {
+      mb: (written / 1048576).toFixed(1),
+      pct: Math.min(99, Math.floor((written * 100) / BACKUP_BYTES)),
+    });
+  }
+  pilot.show();
+}
+
 function startPilot(nameKey) {
   pilot = new Pilot(nameKey);
   pilot.show();
+  clearInterval(pilotClock);
+  pilotClock = setInterval(() => pilot?.show(), 1000);
   updateAutoButtons();
   return pilot;
 }
 
 function endPilot(statusKey, values = {}) {
   clearTimeout(pilot?.quiet);
+  clearInterval(pilotClock);
   pilot = null;
   pilotBar.hidden = true;
   showStatus(statusKey, values);

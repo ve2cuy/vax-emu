@@ -3,6 +3,8 @@
 export const memory: WebAssembly.Memory;
 export const __wbg_emulator_free: (a: number, b: number) => void;
 export const emulator_attach_disk: (a: number, b: number, c: number, d: number, e: any) => [number, number];
+export const emulator_disk_read: (a: number, b: number) => number;
+export const emulator_disk_written: (a: number, b: number) => number;
 export const emulator_drive_blocks: (a: number, b: number) => number;
 export const emulator_drive_types: () => [number, number];
 export const emulator_flush_disks: (a: number) => void;

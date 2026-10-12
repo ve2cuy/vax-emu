@@ -26,6 +26,24 @@ export class Emulator {
         }
     }
     /**
+     * Octets lus sur le lecteur `unit` depuis la mise sous tension.
+     * @param {number} unit
+     * @returns {number}
+     */
+    disk_read(unit) {
+        const ret = wasm.emulator_disk_read(this.__wbg_ptr, unit);
+        return ret;
+    }
+    /**
+     * Octets écrits sur le lecteur `unit` depuis la mise sous tension (progression).
+     * @param {number} unit
+     * @returns {number}
+     */
+    disk_written(unit) {
+        const ret = wasm.emulator_disk_written(this.__wbg_ptr, unit);
+        return ret;
+    }
+    /**
      * Capacité (blocs de 512 octets) d'un type de lecteur.
      * @param {string} name
      * @returns {number}

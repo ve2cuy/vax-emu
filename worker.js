@@ -3,7 +3,8 @@
 // retard est abandonné au-delà de 200 ms (le VAX ralentit, sans rattrapage brutal).
 //
 // Messages reçus : start {rom, nvr, mem, server, disks, bridge}, input {bytes}, break, stop.
-// Messages envoyés : ready, output {bytes}, stats {mips, simMs}, nvr {bytes}, stopped {reason},
+// Messages envoyés : ready, output {bytes}, stats {mips, simMs, io [[lus, écrits] × 4]},
+// nvr {bytes}, stopped {reason},
 // closed (images fermées après stop), error {msg}, net {state, url} (relais vax-bridge).
 //
 // Réseau : par défaut, le réseau virtuel de la machine (passerelle 10.0.2.2). Avec
@@ -170,7 +171,8 @@ function tick() {
   const now = performance.now();
   statInst += emu.take_instructions();
   if (now - statTime >= 1000) {
-    post({ type: 'stats', mips: statInst / (now - statTime) / 1000, simMs: sim });
+    const io = [0, 1, 2, 3].map((u) => [emu.disk_read(u), emu.disk_written(u)]);
+    post({ type: 'stats', mips: statInst / (now - statTime) / 1000, simMs: sim, io });
     statInst = 0;
     statTime = now;
   }

@@ -12,6 +12,7 @@ const XTERM = '<a href="https://xtermjs.org/" target="_blank" rel="noopener">xte
 
 const STRINGS = {
   en: {
+    "auto.progress.backup": "{mb} MB written to DUA0 (about {pct} %)",
     "nav.net": "Network",
     "net.mode": "Ethernet (XQA0)",
     "net.virtual": "Virtual",
@@ -68,7 +69,7 @@ const STRINGS = {
     "auto.step.cd": "copying the CD from the repository…",
     "auto.step.blank": "blank RA82 in DUA0…",
     "auto.step.boot": "booting the CD…",
-    "auto.step.backup": "restoring the system to DUA0 (BACKUP)…",
+    "auto.step.backup": "restoring the system to DUA0 (BACKUP, a few minutes)…",
     "auto.step.install": "booting DUA0…",
     "auto.step.bootVms": "booting OpenVMS…",
     "auto.step.login": "logging in as SYSTEM…",
@@ -179,6 +180,7 @@ const STRINGS = {
     'error': 'Error: {msg}',
   },
   fr: {
+    "auto.progress.backup": "{mb} Mo écrits sur DUA0 (environ {pct} %)",
     "nav.net": "Réseau",
     "net.mode": "Ethernet (XQA0)",
     "net.virtual": "Virtuel",
@@ -235,7 +237,7 @@ const STRINGS = {
     "auto.step.cd": "copie du CD du dépôt…",
     "auto.step.blank": "RA82 vierge dans DUA0…",
     "auto.step.boot": "amorçage du CD…",
-    "auto.step.backup": "restauration du système sur DUA0 (BACKUP)…",
+    "auto.step.backup": "restauration du système sur DUA0 (BACKUP, quelques minutes)…",
     "auto.step.install": "amorçage de DUA0…",
     "auto.step.bootVms": "démarrage d’OpenVMS…",
     "auto.step.login": "connexion SYSTEM…",
@@ -346,6 +348,7 @@ const STRINGS = {
     'error': 'Erreur : {msg}',
   },
   es: {
+    "auto.progress.backup": "{mb} MB escritos en DUA0 (alrededor del {pct} %)",
     "nav.net": "Red",
     "net.mode": "Ethernet (XQA0)",
     "net.virtual": "Virtual",
@@ -402,7 +405,7 @@ const STRINGS = {
     "auto.step.cd": "copiando el CD del repositorio…",
     "auto.step.blank": "RA82 vacío en DUA0…",
     "auto.step.boot": "arrancando el CD…",
-    "auto.step.backup": "restaurando el sistema en DUA0 (BACKUP)…",
+    "auto.step.backup": "restaurando el sistema en DUA0 (BACKUP, unos minutos)…",
     "auto.step.install": "arrancando DUA0…",
     "auto.step.bootVms": "arrancando OpenVMS…",
     "auto.step.login": "iniciando sesión como SYSTEM…",
@@ -513,6 +516,7 @@ const STRINGS = {
     'error': 'Error: {msg}',
   },
   zh: {
+    "auto.progress.backup": "已向 DUA0 写入 {mb} MB（约 {pct}%）",
     "nav.net": "网络",
     "net.mode": "以太网（XQA0）",
     "net.virtual": "虚拟",
@@ -569,7 +573,7 @@ const STRINGS = {
     "auto.step.cd": "正在从仓库复制光盘…",
     "auto.step.blank": "在 DUA0 放入空白 RA82…",
     "auto.step.boot": "正在从光盘引导…",
-    "auto.step.backup": "正在将系统恢复到 DUA0（BACKUP）…",
+    "auto.step.backup": "正在将系统恢复到 DUA0（BACKUP，需要几分钟）…",
     "auto.step.install": "正在引导 DUA0…",
     "auto.step.bootVms": "正在启动 OpenVMS…",
     "auto.step.login": "正在以 SYSTEM 登录…",
