@@ -1135,3 +1135,17 @@ button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--error)
 .local-disks { display: flex; flex-direction: column; gap: 8px; }
 .local-disk .row { flex-wrap: wrap; gap: 4px; }
 .local-disk button { padding: 4px 8px; font-size: 0.8rem; }
+
+/* Dépôt : fiche du fichier choisi */
+.repo-detail { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.repo-detail:empty { display: none; }
+.repo-detail .row { align-items: center; flex-wrap: wrap; }
+.repo-detail .hint.small { font-size: 0.75rem; }
+#repo-select { width: 100%; }
+#panel-install > button { align-self: flex-start; }
+
+/* Automatisation en cours (Init from Web, Install TCP/IP) */
+.pilot { display: flex; align-items: center; gap: 12px; margin: 10px 0 0; padding: 8px 12px;
+  border: 1px solid var(--accent, #2bb3c0); border-radius: 8px; font-size: 0.88rem; }
+.pilot[hidden] { display: none; }
+.pilot span { flex: 1; }

@@ -33,6 +33,22 @@ WebAssembly. It installs and runs **OpenVMS VAX**, as on a VAX 4000 model 200.
 The **Halt** button (or Ctrl+P, when the console allows it) stops the processor and
 returns to the `>>>` prompt, like the BREAK key of a real console terminal.
 
+## Repository and one-click installs
+
+The **Repository** menu lists the files of the emulator's repository
+(<https://ve2cuy.com/vax>): console ROMs, ready-to-boot disks (OpenVMS VAX V7.1 installed,
+with or without TCP/IP) and CDs (OpenVMS VAX V7.1, CMU-OpenVMS/IP, OpenVMS Freeware V2.0
+and V3.0). Pick a file, choose a drive and press **Insert**: it is copied into your
+browser (compressed files are decompressed on the way).
+
+The **Install** menu automates the long parts:
+
+- **Init from Web** puts a blank RA82 in DUA0 and the OpenVMS VAX V7.1 CD in DUA1, boots
+  the CD, restores the system to the disk and starts the installation procedure; you then
+  answer its questions (options, passwords, node name, time zone).
+- **Install TCP/IP** installs CMU-OpenVMS/IP on the OpenVMS system in DUA0 (you give the
+  SYSTEM password): telnet and FTP, address 10.0.2.15, started with the system.
+
 ## Disks and OpenVMS
 
 The **Disks** menu manages the four drives. Images are kept in the browser's private

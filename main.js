@@ -4,7 +4,7 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, setLanguage, t } from './i18n.js';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js';
 
 const VERSION = '0.1.0';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
@@ -39,6 +39,9 @@ const prefs = {
   power: true,       // allumer au chargement de la page (si un ROM est gardé)
   // Lecteurs MSCP DUA0-DUA3 : { drive, file (nom dans l'OPFS), name (nom d'origine), size }.
   disks: [null, null, null, null],
+  repo: 'https://ve2cuy.com/vax', // dépôt de fichiers (dossiers rom, disk, iso)
+  repoKind: 'disk',
+  repoPick: {},      // fichier choisi dans chaque dossier du dépôt
   ...readPrefs(),
 };
 if (!Array.isArray(prefs.disks) || prefs.disks.length !== 4) prefs.disks = [null, null, null, null];
@@ -362,6 +365,7 @@ function updateButtons() {
   powerLabel.dataset.i18n = running ? 'power.off' : 'power.on';
   powerLabel.textContent = t(powerLabel.dataset.i18n);
   showOverlay();
+  updateAutoButtons();
 }
 
 function modelName() {
@@ -402,6 +406,7 @@ function powerOff(user = false) {
   if (user) {
     prefs.power = false;
     savePrefs();
+    pilot?.cancel();
     showStatus('status.off');
   }
   updateButtons();
@@ -430,9 +435,12 @@ function onWorkerMessage(e) {
     case 'ready':
       showStatus('status.running', { model: modelName(), mem: prefs.mem });
       break;
-    case 'output':
-      term.write(bytesToString(msg.bytes));
+    case 'output': {
+      const text = bytesToString(msg.bytes);
+      term.write(text);
+      pilot?.feed(text);
       break;
+    }
     case 'stats':
       speed.textContent = t('speed', { mips: msg.mips.toFixed(1) });
       break;
@@ -595,8 +603,12 @@ async function removeFile(file) {
   } catch { /* déjà absent */ }
 }
 
-/** Copie un flux dans l'OPFS (avec la progression), puis le branche sur `unit`. */
-async function importStream(unit, name, size, stream) {
+/**
+ * Copie un flux dans l'OPFS (avec la progression), puis le branche sur `unit` (type de
+ * lecteur `drive`, sinon celui du lecteur; RRD40 pour un .iso). Rend vrai si réussi.
+ */
+async function importStream(unit, name, size, stream, drive = null) {
+  let ok = false;
   diskBusy = true;
   renderDisks();
   updateButtons();
@@ -622,11 +634,11 @@ async function importStream(unit, name, size, stream) {
       }
     }
     await out.close();
-    let drive = driveOf(unit);
-    if (/\.iso$/i.test(name)) drive = 'RRD40';
+    drive ??= /\.iso$/i.test(name) ? 'RRD40' : driveOf(unit);
     prefs.disks[unit] = { drive, file, name, size: done };
     savePrefs();
     showStatus('disk.imported', { name, unit: `DUA${unit}` });
+    ok = true;
   } catch (e) {
     showStatus('error', { msg: e.message ?? String(e) });
   } finally {
@@ -634,6 +646,7 @@ async function importStream(unit, name, size, stream) {
     renderDisks();
     updateButtons();
   }
+  return ok;
 }
 
 diskFile.addEventListener('change', () => {
@@ -718,6 +731,549 @@ async function showLocalDisks() {
 
 renderDisks();
 showLocalDisks();
+
+// ------------------------------------------------------------------ dépôt de fichiers
+
+// Un dépôt sur le Web (par défaut ve2cuy.com/vax), comme celui du TRS-80 : dossiers rom/,
+// disk/ et iso/, chacun avec un index.json : [{ file, title, description, size (octets
+// une fois décompressé), drive, year, license, id, i18n: { fr: { title, description } } }]
+// ou simplement des noms de fichiers. Les fichiers compressés (gzip) sont décompressés en
+// les copiant dans le fureteur. Le serveur doit permettre les requêtes d'une autre
+// origine (CORS).
+const DEFAULT_REPO = 'https://ve2cuy.com/vax';
+const repoSelect = document.getElementById('repo-select');
+const repoDetail = document.getElementById('repo-detail');
+const repoStatus = document.getElementById('repo-status');
+const repoInput = document.getElementById('repo-url');
+const repoCache = new Map(); // adresse d'un index.json -> ses entrées
+let repoShown = [];
+
+function repoUrl(path) {
+  return `${prefs.repo.replace(/\/+$/, '')}/${path}`;
+}
+
+/** Texte d'une entrée dans la langue de l'interface (`i18n.<langue>`), sinon l'anglais. */
+function localized(entry, field) {
+  return entry.i18n?.[getLanguage()]?.[field] ?? entry[field];
+}
+
+/** Entrées de `kind/index.json` (gardées en mémoire). */
+async function repoIndex(kind) {
+  const url = repoUrl(`${kind}/index.json`);
+  let entries = repoCache.get(url);
+  if (!entries) {
+    const res = await fetch(url, { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const list = await res.json();
+    if (!Array.isArray(list)) throw new Error(t('repo.notList'));
+    entries = list.map((e) => (typeof e === 'string' ? { file: e } : e)).filter((e) => e?.file);
+    repoCache.set(url, entries);
+  }
+  return entries;
+}
+
+/** L'entrée `id` du dossier `kind` (boutons d'installation). */
+async function repoEntry(kind, id) {
+  const entry = (await repoIndex(kind)).find((e) => e.id === id);
+  if (!entry) throw new Error(t('auto.noEntry', { name: `${kind}/${id}`, url: prefs.repo }));
+  return entry;
+}
+
+/** Nom du fichier une fois copié (sans « .gz »). */
+function repoName(entry) {
+  return entry.file.split('/').pop().replace(/\.gz$/i, '');
+}
+
+/** Flux d'un fichier, décompressé s'il commence par la signature gzip (1F 8B). */
+async function maybeGunzip(body) {
+  const reader = body.getReader();
+  const first = await reader.read();
+  const head = first.value ?? new Uint8Array(0);
+  const stream = new ReadableStream({
+    start(c) {
+      if (first.done) c.close();
+      else c.enqueue(head);
+    },
+    async pull(c) {
+      const { value, done } = await reader.read();
+      if (done) c.close();
+      else c.enqueue(value);
+    },
+    cancel(reason) {
+      return reader.cancel(reason);
+    },
+  });
+  return head[0] === 0x1f && head[1] === 0x8b ? stream.pipeThrough(new DecompressionStream('gzip')) : stream;
+}
+
+async function fetchRepo(kind, entry) {
+  const url = repoUrl(`${kind}/${entry.file.split('/').map(encodeURIComponent).join('/')}`);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} — ${url}`);
+  return maybeGunzip(res.body);
+}
+
+/** Copie un fichier du dépôt dans l'OPFS et le branche sur `unit` (VAX éteint). */
+async function importFromRepo(kind, entry, unit) {
+  if (running || diskBusy) {
+    showStatus('disk.locked');
+    return false;
+  }
+  try {
+    const stream = await fetchRepo(kind, entry);
+    const drive = entry.drive ?? (kind === 'iso' ? 'RRD40' : null);
+    return await importStream(unit, repoName(entry), entry.size ?? 0, stream, drive);
+  } catch (e) {
+    showStatus('error', { msg: e.message ?? String(e) });
+    return false;
+  }
+}
+
+/** Comme importFromRepo, sauf si le lecteur a déjà ce fichier (même nom, même taille). */
+async function ensureRepoFile(kind, entry, unit) {
+  const d = prefs.disks[unit];
+  if (d?.file && d.name === repoName(entry) && (!entry.size || d.size === entry.size)) return true;
+  return importFromRepo(kind, entry, unit);
+}
+
+async function loadRepoRom(entry) {
+  try {
+    const reader = (await fetchRepo('rom', entry)).getReader();
+    const parts = [];
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      parts.push(value);
+    }
+    const bytes = new Uint8Array(await new Blob(parts).arrayBuffer());
+    if (bytes.length !== ROM_SIZE) throw new Error(t('rom.bad', { name: entry.file }));
+    rom = { name: repoName(entry), bytes };
+    await dbPut('rom', rom);
+    showRomInfo();
+    showStatus('repo.romLoaded', { name: localized(entry, 'title') ?? entry.file });
+    powerOn();
+  } catch (e) {
+    showStatus('error', { msg: e.message ?? String(e) });
+  }
+}
+
+function repoDetailFor(kind, entry) {
+  const parts = [];
+  const title = document.createElement('strong');
+  title.textContent = localized(entry, 'title') ?? entry.file;
+  parts.push(title);
+  const sub = document.createElement('span');
+  sub.className = 'hint';
+  const mb = entry.size ? t('repo.mb', { mb: Math.max(1, Math.round(entry.size / 1048576)) }) : null;
+  sub.textContent = [entry.file.split('/').pop(), mb, entry.year].filter(Boolean).join(' · ');
+  parts.push(sub);
+  const about = localized(entry, 'description');
+  if (about) {
+    const p = document.createElement('p');
+    p.className = 'hint';
+    p.textContent = about;
+    parts.push(p);
+  }
+  if (entry.license) {
+    const p = document.createElement('p');
+    p.className = 'hint small';
+    p.textContent = entry.license;
+    parts.push(p);
+  }
+  const actions = document.createElement('div');
+  actions.className = 'row';
+  if (kind === 'rom') {
+    actions.append(button(t('repo.loadRom'), '', 'i-cpu', () => loadRepoRom(entry), false));
+  } else {
+    const unitSel = document.createElement('select');
+    unitSel.setAttribute('aria-label', t('repo.unit'));
+    for (let u = 0; u < 4; u++) unitSel.append(new Option(`DUA${u}`, String(u)));
+    unitSel.value = kind === 'iso' ? '1' : '0';
+    unitSel.disabled = running || diskBusy;
+    actions.append(unitSel, button(t('repo.put'), t('repo.put.tip'), 'i-download', () => {
+      importFromRepo(kind, entry, Number(unitSel.value));
+    }, running || diskBusy));
+  }
+  const link = document.createElement('a');
+  link.href = repoUrl(`${kind}/${entry.file}`);
+  link.textContent = t('repo.download');
+  link.className = 'hint';
+  link.target = '_blank';
+  link.rel = 'noopener';
+  actions.append(link);
+  parts.push(actions);
+  if (running && kind !== 'rom') {
+    const p = document.createElement('p');
+    p.className = 'hint';
+    p.textContent = t('disk.locked');
+    parts.push(p);
+  }
+  return parts;
+}
+
+function showRepoDetail() {
+  const entry = repoShown[Number(repoSelect.value)];
+  repoDetail.replaceChildren(...(entry ? repoDetailFor(prefs.repoKind, entry) : []));
+}
+
+async function loadRepo() {
+  const kind = prefs.repoKind;
+  for (const radio of document.querySelectorAll('input[name="repo-kind"]')) radio.checked = radio.value === kind;
+  repoStatus.textContent = t('repo.loading');
+  try {
+    const entries = await repoIndex(kind);
+    if (prefs.repoKind !== kind) return;
+    repoShown = entries;
+    repoSelect.replaceChildren(...entries.map((e, i) => new Option(localized(e, 'title') ?? e.file, String(i))));
+    if (!entries.length) repoSelect.append(new Option('—', ''));
+    repoSelect.disabled = !entries.length;
+    const picked = entries.findIndex((e) => e.file === prefs.repoPick[kind]);
+    repoSelect.value = String(Math.max(picked, 0));
+    repoStatus.textContent = entries.length ? t('repo.count', { n: entries.length, url: repoUrl(`${kind}/`) }) : t('repo.empty');
+    showRepoDetail();
+  } catch (e) {
+    if (prefs.repoKind !== kind) return;
+    repoShown = [];
+    repoSelect.replaceChildren(new Option('—', ''));
+    repoSelect.disabled = true;
+    repoDetail.replaceChildren();
+    const reason = e instanceof TypeError ? t('repo.unreachable') : e.message;
+    repoStatus.textContent = t('repo.unavailable', { url: repoUrl(`${kind}/index.json`), reason });
+  }
+}
+
+repoSelect.addEventListener('change', () => {
+  const entry = repoShown[Number(repoSelect.value)];
+  if (entry) prefs.repoPick[prefs.repoKind] = entry.file;
+  savePrefs();
+  showRepoDetail();
+});
+for (const radio of document.querySelectorAll('input[name="repo-kind"]')) {
+  radio.addEventListener('change', () => {
+    prefs.repoKind = radio.value;
+    savePrefs();
+    loadRepo();
+  });
+}
+
+function useRepo(address) {
+  let url;
+  try {
+    url = new URL(address, location.href);
+    if (!/^https?:$/.test(url.protocol)) throw new Error();
+  } catch {
+    repoStatus.textContent = t('repo.badUrl');
+    return;
+  }
+  prefs.repo = repoInput.value = url.href.replace(/\/+$/, '');
+  savePrefs();
+  repoCache.clear();
+  loadRepo();
+}
+repoInput.value = prefs.repo;
+document.getElementById('repo-save').addEventListener('click', () => useRepo(repoInput.value.trim()));
+repoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') useRepo(repoInput.value.trim()); });
+document.getElementById('repo-default').addEventListener('click', () => useRepo(DEFAULT_REPO));
+languageListeners.push(() => { if (repoShown.length) loadRepo(); });
+document.querySelector('[aria-controls="panel-repo"]').addEventListener('click', () => {
+  if (!repoShown.length) loadRepo();
+});
+if (prefs.open.includes('repo')) loadRepo();
+
+// ------------------------------------------------------------------ automatisation
+
+// Le pilote lit la console (comme tools/vms/*.txt avec l'exemple expect) : il attend un
+// texte, tape une réponse, répond aux invites connues (`answers`) et, au besoin, par Retour
+// aux autres invites « [...]? » restées sans suite (`defaults`). Les délais sont en temps
+// réel (le VAX de la page va au rythme du fureteur).
+let pilot = null;
+const pilotBar = document.getElementById('pilot');
+const pilotText = document.getElementById('pilot-text');
+
+class Pilot {
+  constructor(nameKey) {
+    this.nameKey = nameKey;
+    this.stepKey = null;
+    this.buf = '';
+    this.answers = [];
+    this.defaults = false;
+    this.target = null;   // { texts, resolve, reject, timer }
+    this.quiet = 0;
+    this.cancelled = false;
+  }
+
+  show() {
+    pilotBar.hidden = false;
+    pilotText.textContent = t('auto.running', { name: t(this.nameKey), step: this.stepKey ? t(this.stepKey) : '' });
+  }
+
+  step(key) {
+    this.stepKey = key;
+    this.show();
+  }
+
+  send(text) {
+    if (this.cancelled) throw new Error(t('auto.cancelled'));
+    sendBytes(stringToBytes(text));
+  }
+
+  feed(text) {
+    this.buf += text.replace(/\0/g, '');
+    if (this.buf.length > 100000) this.buf = this.buf.slice(-50000);
+    this.scan();
+    clearTimeout(this.quiet);
+    if (this.defaults) {
+      this.quiet = setTimeout(() => {
+        if (/\]\? $|\]: $/.test(this.buf)) {
+          this.buf = '';
+          this.send('\r');
+        }
+      }, 3000);
+    }
+  }
+
+  scan() {
+    for (;;) {
+      let best = null;
+      if (this.target) {
+        this.target.texts.forEach((text, n) => {
+          const i = this.buf.indexOf(text);
+          if (i >= 0 && (!best || i < best.i)) best = { i, len: text.length, n };
+        });
+      }
+      for (const [prompt, reply] of this.answers) {
+        const i = this.buf.indexOf(prompt);
+        if (i >= 0 && (!best || i < best.i)) best = { i, len: prompt.length, reply };
+      }
+      if (!best) return;
+      this.buf = this.buf.slice(best.i + best.len);
+      if (best.reply === undefined) {
+        const target = this.target;
+        this.target = null;
+        clearTimeout(target.timer);
+        target.resolve(best.n);
+        return;
+      }
+      this.send(best.reply);
+    }
+  }
+
+  /** Attend l'un des textes (rend son rang) pendant au plus `seconds` secondes. */
+  wait(texts, seconds) {
+    if (this.cancelled) return Promise.reject(new Error(t('auto.cancelled')));
+    const list = Array.isArray(texts) ? texts : [texts];
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.target = null;
+        reject(new Error(t('auto.timeout', { text: list[0].trim() })));
+      }, seconds * 1000);
+      this.target = { texts: list, resolve, reject, timer };
+      this.scan();
+    });
+  }
+
+  sleep(seconds) {
+    return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+  }
+
+  cancel() {
+    this.cancelled = true;
+    clearTimeout(this.quiet);
+    if (this.target) {
+      clearTimeout(this.target.timer);
+      this.target.reject(new Error(t('auto.cancelled')));
+      this.target = null;
+    }
+  }
+}
+
+function startPilot(nameKey) {
+  pilot = new Pilot(nameKey);
+  pilot.show();
+  updateAutoButtons();
+  return pilot;
+}
+
+function endPilot(statusKey, values = {}) {
+  clearTimeout(pilot?.quiet);
+  pilot = null;
+  pilotBar.hidden = true;
+  showStatus(statusKey, values);
+  updateAutoButtons();
+}
+
+function updateAutoButtons() {
+  document.getElementById('auto-init').disabled = !!pilot || !rom;
+  document.getElementById('auto-tcpip').disabled = !!pilot || !rom;
+}
+
+document.getElementById('pilot-stop').addEventListener('click', () => {
+  pilot?.cancel();
+  term.focus();
+});
+
+/** Date et heure locales pour VMS : 12-OCT-2026 18:30. */
+function vmsDate() {
+  const d = new Date();
+  const mon = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][d.getMonth()];
+  const two = (n) => String(n).padStart(2, '0');
+  return `${two(d.getDate())}-${mon}-${d.getFullYear()} ${two(d.getHours())}:${two(d.getMinutes())}`;
+}
+
+/**
+ * Init from Web : RA82 vierge sur DUA0, CD d'OpenVMS VAX V7.1 du dépôt sur DUA1, amorçage
+ * du CD, restauration du système (BACKUP) et démarrage de la procédure d'installation;
+ * l'usager répond ensuite à ses questions.
+ */
+async function initFromWeb() {
+  if (pilot || diskBusy || !rom) return;
+  if (!confirm(t('auto.init.confirm'))) return;
+  const P = startPilot('auto.init');
+  try {
+    await powerOff();
+    P.step('auto.step.cd');
+    const cd = await repoEntry('iso', 'openvms-vax-7.1');
+    if (!(await ensureRepoFile('iso', cd, 1))) throw new Error(t('auto.fail.download', { name: cd.file }));
+    P.step('auto.step.blank');
+    prefs.disks[0] = { ...(prefs.disks[0] ?? {}), drive: 'RA82' };
+    await blankDisk(0);
+    P.step('auto.step.boot');
+    await powerOn();
+    await P.wait('>>>', 180);
+    P.send('B DUA1\r');
+    await P.wait('(DD-MMM-YYYY  HH:MM)', 1800);
+    P.send(`${vmsDate()}\r`);
+    await P.wait('available:', 1800);
+    P.send('YES\r');
+    await P.wait('$ ', 1800);
+    P.step('auto.step.backup');
+    P.send('BACKUP DUA1:VMS071.B/SAVE_SET DUA0:\r');
+    await P.wait('to continue:', 7200);
+    worker?.postMessage({ type: 'break' });
+    await P.wait('>>>', 180);
+    P.step('auto.step.install');
+    P.send('B DUA0\r');
+    endPilot('auto.init.done');
+  } catch (e) {
+    endPilot('auto.fail', { msg: e.message ?? String(e) });
+  }
+  term.focus();
+}
+
+/** Réponses de VMSINSTAL pour CMU-OpenVMS/IP (tools/vms/cmuip.txt). */
+const CMUIP_ANSWERS = [
+  ['satisfied with the backup of your system disk [YES]?', 'YES\r'],
+  ['Do you want to install everything [YES]?', 'NO\r'],
+  ['install the development libraries [NO]?', 'YES\r'],
+  ['Do you want to install LPR [YES]?', 'NO\r'],
+  ['Do you want to install Finger [YES]?', 'NO\r'],
+  ['Do you want to install Talk [YES]?', 'NO\r'],
+  ['Host Full Name [xyz.serendipityU.edu]:', 'vaxemu.local\r'],
+  ['What is this Hosts IP address:', '10.0.2.15\r'],
+  ['What is the address mask [255.0.0.0]:', '255.255.255.0\r'],
+  ['Which device is the network device (omit colon) [XQA0]:', 'XQA0\r'],
+  ['Will you be providing an NFS server [YES]?', 'NO\r'],
+  ['Would you like the SNMP module included [YES]?', 'NO\r'],
+];
+
+/**
+ * Install TCP/IP : CD de CMU-OpenVMS/IP du dépôt sur DUA1, amorçage de DUA0, connexion
+ * SYSTEM, puis l'installation de tools/vms/cmuip.txt (correctif PTY, VMSINSTAL, correctif
+ * 6.6-5K, démarrage avec le système) : 10.0.2.15 sur le réseau virtuel.
+ */
+async function installTcpip() {
+  if (pilot || diskBusy || !rom) return;
+  if (!prefs.disks[0]?.file) {
+    showStatus('auto.tcp.noSystem');
+    return;
+  }
+  const password = prompt(t('auto.tcp.password'));
+  if (!password) return;
+  const P = startPilot('auto.tcp');
+  const cmd = async (line, seconds = 600) => {
+    P.send(`${line}\r`);
+    await P.wait('$ ', seconds);
+  };
+  try {
+    await powerOff();
+    P.step('auto.step.cd');
+    const cd = await repoEntry('iso', 'cmuip-6.6-5k');
+    if (!(await ensureRepoFile('iso', cd, 1))) throw new Error(t('auto.fail.download', { name: cd.file }));
+    P.step('auto.step.bootVms');
+    await powerOn();
+    await P.wait('>>>', 180);
+    P.send('B DUA0\r');
+    await P.wait('Accounting information:', 3600);
+    await P.sleep(5);
+    P.step('auto.step.login');
+    P.send('\r');
+    await P.wait('Username:', 300);
+    P.send('SYSTEM\r');
+    await P.wait('Password:', 120);
+    P.send(`${password}\r`);
+    if ((await P.wait(['$ ', 'User authorization failure'], 300)) === 1) throw new Error(t('auto.tcp.badPassword'));
+    P.step('auto.step.copy');
+    await cmd('MOUNT/MEDIA_FORMAT=CDROM/NOWRITE DUA1: CMUIP066');
+    await cmd('CREATE/DIRECTORY SYS$SYSDEVICE:[CMUIP066]');
+    await cmd('SET DEFAULT SYS$SYSDEVICE:[CMUIP066]');
+    await cmd('COPY DUA1:[000000]*.* []', 1800);
+    await cmd('SET FILE/ATTRIBUTES=(RFM:FIX,MRS:8192,LRL:8192,RAT:NONE) CMUIP066.*');
+    await cmd('SET FILE/ATTRIBUTES=(RFM:FIX,MRS:2048,LRL:2048,RAT:NONE) CMUIP665.BCK');
+    P.step('auto.step.pty');
+    await cmd('CREATE/DIRECTORY [.CMUIP_B]');
+    await cmd('CREATE/DIRECTORY [.PTY_B]');
+    await cmd('BACKUP CMUIP066.B/SAVE_SET [.CMUIP_B]*.*', 1800);
+    await cmd('BACKUP [.CMUIP_B]PTY054.B/SAVE_SET [.PTY_B]*.*', 1800);
+    await cmd('COPY [.PTY_B]TZDRIVER_V6.OBJ [.PTY_B]TZDRIVER_V7.OBJ');
+    await cmd('BACKUP [.PTY_B]*.* [.CMUIP_B]PTY054.B/SAVE_SET', 1800);
+    await cmd('BACKUP [.CMUIP_B]*.* CMUIP066.B/SAVE_SET', 1800);
+    P.step('auto.step.vmsinstal');
+    await cmd('SET DEFAULT SYS$UPDATE');
+    P.answers = CMUIP_ANSWERS;
+    P.defaults = true;
+    P.send('@VMSINSTAL CMUIP SYS$SYSDEVICE:[CMUIP066]\r');
+    await P.wait('VMSINSTAL procedure done', 7200);
+    P.answers = [];
+    P.defaults = false;
+    await P.wait('$ ', 300);
+    P.step('auto.step.patch');
+    await cmd('SET DEFAULT SYS$SYSDEVICE:[CMUIP066]');
+    await cmd('CREATE/DIRECTORY [.P665K]');
+    await cmd('BACKUP CMUIP665.BCK/SAVE_SET [.P665K]*.*', 1800);
+    await cmd('SET DEFAULT SYS$COMMON:[SYSEXE]');
+    await cmd('RENAME IPACP.EXE IPACP.EXE_V665');
+    await cmd('RENAME FTP_SERVER.EXE FTP_SERVER.EXE_V665');
+    await cmd('COPY SYS$SYSDEVICE:[CMUIP066.P665K]IPACP.EXE,FTP_SERVER.EXE []');
+    P.step('auto.step.startup');
+    await cmd('SET DEFAULT SYS$LOGIN');
+    P.send('CREATE ADDIP.COM\r');
+    for (const line of [
+      '$ OPEN/READ I SYS$MANAGER:SYSTARTUP_VMS.COM',
+      '$ OPEN/WRITE O SYS$MANAGER:SYSTARTUP_VMS.COM',
+      '$ LOOP: READ/END_OF_FILE=DONE I R',
+      '$ IF F$EDIT(R,"UPCASE,COMPRESS,TRIM") .EQS. "$ EXIT" THEN WRITE O "$ @SYS$MANAGER:IP_STARTUP"',
+      '$ WRITE O R',
+      '$ GOTO LOOP',
+      '$ DONE: CLOSE I',
+      '$ CLOSE O',
+    ]) P.send(`${line}\r`);
+    P.send('\x1a');
+    // CREATE finit par « *EXIT* » (terminal inconnu) ou « Exit » (VT100, dans la page).
+    await P.wait(['*EXIT*', ' Exit'], 300);
+    await P.wait('$ ', 300);
+    await cmd('@ADDIP');
+    P.step('auto.step.start');
+    P.send('@SYS$MANAGER:IP_STARTUP\r');
+    await P.wait('IPACP: Network online', 1800);
+    endPilot('auto.tcp.done');
+  } catch (e) {
+    endPilot('auto.fail', { msg: e.message ?? String(e) });
+  }
+  term.focus();
+}
+
+document.getElementById('auto-init').addEventListener('click', initFromWeb);
+document.getElementById('auto-tcpip').addEventListener('click', installTcpip);
 
 // ------------------------------------------------------------------ démarrage
 

@@ -35,6 +35,23 @@ modèle 200.
 Le bouton **Arrêt** (ou Ctrl+P, quand la console le permet) arrête le processeur et
 revient à l'invite `>>>`, comme la touche BREAK d'un vrai terminal de console.
 
+## Dépôt et installations en un clic
+
+Le menu **Dépôt** liste les fichiers du dépôt de l'émulateur (<https://ve2cuy.com/vax>) :
+ROM de la console, disques prêts à démarrer (OpenVMS VAX V7.1 installé, avec ou sans
+TCP/IP) et CD (OpenVMS VAX V7.1, CMU-OpenVMS/IP, OpenVMS Freeware V2.0 et V3.0). Choisissez
+un fichier et un lecteur, puis **Mettre** : il est copié dans votre fureteur (les
+fichiers compressés sont décompressés en chemin).
+
+Le menu **Installation** automatise les longues étapes :
+
+- **Initialiser depuis le Web** met un RA82 vierge dans DUA0 et le CD d'OpenVMS VAX V7.1
+  dans DUA1, amorce le CD, restaure le système sur le disque et lance la procédure
+  d'installation; vous répondez ensuite à ses questions (options, mots de passe, nom du
+  nœud, fuseau horaire).
+- **Installer TCP/IP** installe CMU-OpenVMS/IP sur le système OpenVMS de DUA0 (vous donnez
+  le mot de passe de SYSTEM) : telnet et FTP, adresse 10.0.2.15, démarré avec le système.
+
 ## Disques et OpenVMS
 
 Le menu **Disques** gère les quatre lecteurs. Les images sont gardées dans le stockage
