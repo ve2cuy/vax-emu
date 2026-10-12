@@ -1,0 +1,42 @@
+vax-emu
+Copyright 2026 Alain Boudreault (VE2CUY)
+
+Licensed under the Apache License, Version 2.0 (see the LICENSE file).
+
+-------------------------------------------------------------------------------
+Portions of this software are derived from SIMH (https://github.com/simh/simh),
+in particular the VAX simulator (VAX/vax_cpu.c, vax_cpu1.c, vax_mmu.c,
+vax_mmu.h, vax_defs.h, vax_sys.c and related files), translated to Rust.
+Those portions remain under the following terms:
+
+   Copyright (c) 1998-2019, Robert M Supnik
+
+   Permission is hereby granted, free of charge, to any person obtaining a
+   copy of this software and associated documentation files (the "Software"),
+   to deal in the Software without restriction, including without limitation
+   the rights to use, copy, modify, merge, publish, distribute, sublicense,
+   and/or sell copies of the Software, and to permit persons to whom the
+   Software is furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+   ROBERT M SUPNIK BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+   IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+   Except as contained in this notice, the name of Robert M Supnik shall not be
+   used in advertising or otherwise to promote the sale, use or other dealings
+   in this Software without prior written authorization from Robert M Supnik.
+
+-------------------------------------------------------------------------------
+www/vendor/xterm/ : xterm.js 5.5.0 (https://xtermjs.org/), MIT license,
+Copyright (c) 2017-2019 The xterm.js authors, (c) 2014-2016 SourceLair Private
+Company, (c) 2012-2013 Christopher Jeffrey (see www/vendor/xterm/LICENSE).
+
+-------------------------------------------------------------------------------
+No DEC firmware (console ROM, NVR), DEC diagnostic, or OpenVMS software is
+included in this repository. The web page only links to third-party sources.
