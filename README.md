@@ -49,6 +49,17 @@ The **Install** menu automates the long parts:
 - **Install TCP/IP** installs CMU-OpenVMS/IP on the OpenVMS system in DUA0 (you give the
   SYSTEM password): telnet and FTP, address 10.0.2.15, started with the system.
 
+## Network
+
+The **Network** menu chooses how the VAX's Ethernet controller (XQA0) is connected:
+
+- **Virtual** (default): a private network where a gateway at 10.0.2.2 answers; give the
+  VAX the address 10.0.2.15.
+- **Local bridge**: the VAX appears on your local network with its own address (set in
+  OpenVMS, e.g. 192.168.2.77), through the small *vax-bridge* relay running on your PC
+  (Windows, with [Npcap](https://npcap.com)). Other computers can then ping it and open
+  telnet sessions; your own PC reaches its telnet at `localhost:2323`.
+
 ## Disks and OpenVMS
 
 The **Disks** menu manages the four drives. Images are kept in the browser's private

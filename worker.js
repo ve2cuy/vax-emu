@@ -2,9 +2,13 @@
 // l'interface reste fluide. Le temps simulé suit le temps réel; si l'hôte ne suit pas, le
 // retard est abandonné au-delà de 200 ms (le VAX ralentit, sans rattrapage brutal).
 //
-// Messages reçus : start {rom, nvr, mem, server, disks}, input {bytes}, break, stop.
+// Messages reçus : start {rom, nvr, mem, server, disks, bridge}, input {bytes}, break, stop.
 // Messages envoyés : ready, output {bytes}, stats {mips, simMs}, nvr {bytes}, stopped {reason},
-// closed (images fermées après stop), error {msg}.
+// closed (images fermées après stop), error {msg}, net {state, url} (relais vax-bridge).
+//
+// Réseau : par défaut, le réseau virtuel de la machine (passerelle 10.0.2.2). Avec
+// `bridge` (adresse ws://…), chaque trame Ethernet du VAX part par un WebSocket vers le
+// relais vax-bridge de ce PC, qui la met sur le réseau local, et inversement.
 //
 // Disques : fichiers de l'OPFS (dossier « disks »), ouverts en accès synchrone et branchés
 // sur les lecteurs MSCP (disks : [{unit, drive, file}]).
@@ -22,6 +26,9 @@ let statTime = 0;
 let nvrTime = 0;
 let lastNvr = null;
 let handles = [];   // accès synchrones OPFS ouverts (fermés à l'arrêt)
+let bridgeUrl = null;
+let socket = null;
+let socketTimer = 0;
 let flushTime = 0;
 
 /** Ouvre une image de l'OPFS et la présente à la machine (JsDisk). */
@@ -56,6 +63,47 @@ async function openDisk(file) {
       try { h.flush(); } catch { /* rien */ }
     },
   };
+}
+
+/** Branche le WebSocket du relais; nouvel essai toutes les 5 s s'il se ferme. */
+function openBridge() {
+  clearTimeout(socketTimer);
+  if (!bridgeUrl || !running) return;
+  post({ type: 'net', state: 'connecting', url: bridgeUrl });
+  let ws;
+  try {
+    ws = new WebSocket(bridgeUrl);
+  } catch {
+    socketTimer = setTimeout(openBridge, 5000);
+    return;
+  }
+  ws.binaryType = 'arraybuffer';
+  ws.onopen = () => post({ type: 'net', state: 'open', url: bridgeUrl });
+  ws.onmessage = (e) => {
+    if (emu && e.data instanceof ArrayBuffer) emu.net_rx(new Uint8Array(e.data));
+  };
+  ws.onclose = () => {
+    if (socket !== ws) return;
+    socket = null;
+    post({ type: 'net', state: 'closed', url: bridgeUrl });
+    if (running) socketTimer = setTimeout(openBridge, 5000);
+  };
+  socket = ws;
+}
+
+function closeBridge() {
+  clearTimeout(socketTimer);
+  const ws = socket;
+  socket = null;
+  try { ws?.close(); } catch { /* déjà fermé */ }
+}
+
+/** Trames émises par le VAX : au relais (perdues s'il est débranché). */
+function sendFrames() {
+  if (!bridgeUrl) return;
+  for (let f = emu.net_tx(); f !== undefined; f = emu.net_tx()) {
+    if (socket?.readyState === WebSocket.OPEN) socket.send(f);
+  }
 }
 
 function closeDisks() {
@@ -115,6 +163,7 @@ function tick() {
     }
     sim = emu.now_ms();
   }
+  if (emu) sendFrames();
   const out = emu.take_output();
   if (out.length) post({ type: 'output', bytes: out }, [out.buffer]);
 
@@ -152,8 +201,12 @@ self.onmessage = async (e) => {
         lastNvr = msg.nvr ? msg.nvr.slice() : null;
         const [secs, centis] = yearSeconds();
         emu.set_time(secs, centis);
+        bridgeUrl = msg.bridge ?? null;
+        if (bridgeUrl) emu.use_bridge();
         emu.power_up();
         running = true;
+        closeBridge();
+        openBridge();
         simBase = 0;
         realBase = performance.now();
         statTime = realBase;
@@ -171,6 +224,7 @@ self.onmessage = async (e) => {
         break;
       case 'stop':
         running = false;
+        closeBridge();
         if (emu) {
           flushNvr();
           emu.flush_disks();

@@ -78,6 +78,28 @@ export class Emulator {
         wasm.emulator_load_rom(this.__wbg_ptr, ptr0, len0, server);
     }
     /**
+     * Trame reçue du relais, pour le VAX.
+     * @param {Uint8Array} frame
+     */
+    net_rx(frame) {
+        const ptr0 = passArray8ToWasm0(frame, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.emulator_net_rx(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
+     * Prochaine trame émise par le VAX, pour le relais (undefined s'il n'y en a pas).
+     * @returns {Uint8Array | undefined}
+     */
+    net_tx() {
+        const ret = wasm.emulator_net_tx(this.__wbg_ptr);
+        let v1;
+        if (ret[0] !== 0) {
+            v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+            wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        }
+        return v1;
+    }
+    /**
      * `mem_mb` : mémoire en Mo (16 à 512).
      * @param {number} mem_mb
      */
@@ -170,6 +192,13 @@ export class Emulator {
         const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
         wasm.emulator_type_bytes(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
+     * Avant `power_up` : le contrôleur Ethernet passe par la page (relais vax-bridge)
+     * au lieu du réseau virtuel.
+     */
+    use_bridge() {
+        wasm.emulator_use_bridge(this.__wbg_ptr);
     }
 }
 if (Symbol.dispose) Emulator.prototype[Symbol.dispose] = Emulator.prototype.free;

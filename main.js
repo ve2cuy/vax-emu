@@ -42,6 +42,8 @@ const prefs = {
   repo: 'https://ve2cuy.com/vax', // dépôt de fichiers (dossiers rom, disk, iso)
   repoKind: 'disk',
   repoPick: {},      // fichier choisi dans chaque dossier du dépôt
+  netMode: 'virtual', // 'virtual' (réseau virtuel) ou 'bridge' (relais vax-bridge de ce PC)
+  bridgeUrl: 'ws://127.0.0.1:8023',
   ...readPrefs(),
 };
 if (!Array.isArray(prefs.disks) || prefs.disks.length !== 4) prefs.disks = [null, null, null, null];
@@ -388,7 +390,9 @@ async function powerOn() {
     mem: prefs.mem,
     server: prefs.model === 'server',
     disks: prefs.disks.flatMap((d, unit) => (d?.file ? [{ unit, drive: d.drive, file: d.file }] : [])),
+    bridge: prefs.netMode === 'bridge' ? prefs.bridgeUrl : null,
   });
+  showNet(prefs.netMode === 'bridge' ? 'connecting' : 'virtual');
   running = true;
   prefs.power = true;
   savePrefs();
@@ -454,6 +458,9 @@ function onWorkerMessage(e) {
       break;
     case 'error':
       showStatus('error', { msg: msg.msg });
+      break;
+    case 'net':
+      showNet(msg.state);
       break;
     default:
       break;
@@ -731,6 +738,39 @@ async function showLocalDisks() {
 
 renderDisks();
 showLocalDisks();
+
+// ------------------------------------------------------------------ réseau
+
+// Réseau virtuel (passerelle 10.0.2.2, dans la machine) ou pont vers le réseau local par
+// le relais vax-bridge de ce PC (WebSocket) : le VAX y paraît avec sa propre adresse IP.
+const netUrl = document.getElementById('net-url');
+const netStatus = document.getElementById('net-status');
+let netState = null;
+
+function showNet(state = netState) {
+  netState = state;
+  const bridge = prefs.netMode === 'bridge';
+  document.getElementById('net-url-field').hidden = !bridge;
+  for (const radio of document.querySelectorAll('input[name="net-mode"]')) radio.checked = radio.value === prefs.netMode;
+  netStatus.textContent = !running || !state ? '' : t(`net.state.${state}`, { url: prefs.bridgeUrl });
+}
+languageListeners.push(() => showNet());
+
+for (const radio of document.querySelectorAll('input[name="net-mode"]')) {
+  radio.addEventListener('change', () => {
+    prefs.netMode = radio.value;
+    savePrefs();
+    showNet();
+  });
+}
+netUrl.value = prefs.bridgeUrl;
+netUrl.addEventListener('change', () => {
+  const v = netUrl.value.trim();
+  if (/^wss?:\/\/./.test(v)) prefs.bridgeUrl = v;
+  netUrl.value = prefs.bridgeUrl;
+  savePrefs();
+});
+showNet();
 
 // ------------------------------------------------------------------ dépôt de fichiers
 

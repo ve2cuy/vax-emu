@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=e6591837">
-  <link rel="stylesheet" href="style.css?v=e6591837">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=1526b461">
+  <link rel="stylesheet" href="style.css?v=1526b461">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -139,6 +139,30 @@
               <p class="hint" data-i18n-html="disk.hint"></p>
             </details>
             <input id="disk-file" type="file" hidden>
+          </div>
+        </div>
+
+        <div class="nav-group">
+          <button type="button" class="nav-item" aria-expanded="false" aria-controls="panel-net" data-tip="Network" data-i18n-tip="nav.net">
+            <svg class="chev"><use href="#i-chevron"/></svg>
+            <svg class="icon"><use href="#i-globe"/></svg>
+            <span class="label" data-i18n="nav.net">Network</span>
+          </button>
+          <div id="panel-net" class="nav-panel" hidden>
+            <fieldset class="field segmented">
+              <legend data-i18n="net.mode">Ethernet (XQA0)</legend>
+              <label><input type="radio" name="net-mode" value="virtual"><span data-i18n="net.virtual">Virtual</span></label>
+              <label><input type="radio" name="net-mode" value="bridge"><span data-i18n="net.bridge">Local bridge</span></label>
+            </fieldset>
+            <label id="net-url-field" class="field"><span data-i18n="net.url">Relay address</span>
+              <input id="net-url" type="url" spellcheck="false">
+            </label>
+            <p id="net-status" class="hint"></p>
+            <p class="hint" data-i18n="net.next">The network mode takes effect at the next power-on.</p>
+            <details class="more">
+              <summary data-i18n="more">More information</summary>
+              <p class="hint" data-i18n-html="net.hint"></p>
+            </details>
           </div>
         </div>
 
@@ -316,7 +340,7 @@
       </div>
     </main>
   </div>
-  <script src="vendor/xterm/xterm.js?v=e6591837"></script>
-  <script type="module" src="main.js?v=e6591837"></script>
+  <script src="vendor/xterm/xterm.js?v=1526b461"></script>
+  <script type="module" src="main.js?v=1526b461"></script>
 </body>
 </html>

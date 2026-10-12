@@ -29,6 +29,14 @@ export class Emulator {
      */
     load_rom(data: Uint8Array, server: boolean): void;
     /**
+     * Trame reçue du relais, pour le VAX.
+     */
+    net_rx(frame: Uint8Array): void;
+    /**
+     * Prochaine trame émise par le VAX, pour le relais (undefined s'il n'y en a pas).
+     */
+    net_tx(): Uint8Array | undefined;
+    /**
      * `mem_mb` : mémoire en Mo (16 à 512).
      */
     constructor(mem_mb: number);
@@ -64,6 +72,11 @@ export class Emulator {
      * Caractères tapés sur la console.
      */
     type_bytes(data: Uint8Array): void;
+    /**
+     * Avant `power_up` : le contrôleur Ethernet passe par la page (relais vax-bridge)
+     * au lieu du réseau virtuel.
+     */
+    use_bridge(): void;
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -77,6 +90,8 @@ export interface InitOutput {
     readonly emulator_flush_disks: (a: number) => void;
     readonly emulator_load_nvr: (a: number, b: number, c: number) => void;
     readonly emulator_load_rom: (a: number, b: number, c: number, d: number) => void;
+    readonly emulator_net_rx: (a: number, b: number, c: number) => void;
+    readonly emulator_net_tx: (a: number) => [number, number];
     readonly emulator_new: (a: number) => number;
     readonly emulator_now_ms: (a: number) => number;
     readonly emulator_nvr: (a: number) => [number, number];
@@ -88,6 +103,7 @@ export interface InitOutput {
     readonly emulator_take_instructions: (a: number) => number;
     readonly emulator_take_output: (a: number) => [number, number];
     readonly emulator_type_bytes: (a: number, b: number, c: number) => void;
+    readonly emulator_use_bridge: (a: number) => void;
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
