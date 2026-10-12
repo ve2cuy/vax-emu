@@ -16,7 +16,10 @@ WebAssembly. It installs and runs **OpenVMS VAX**, as on a VAX 4000 model 200.
   serial line, timers, time-of-year clock, Qbus adapter.
 - **Disks**: MSCP controller with four drives (DUA0-DUA3): RA disks and an RRD40 CD-ROM.
   **OpenVMS VAX V7.1 installs from its CD**, boots and accepts logins.
-- **Coming next**: the VAX 4000-200 identity (KA660), Ethernet.
+- **Network**: DELQA Ethernet controller (XQA0) on a private virtual network.
+  **CMU-OpenVMS/IP** (TCP/IP) installs and runs.
+- **Coming next**: a telnet terminal into the VAX in the page, the VAX 4000-200 identity
+  (KA660).
 
 ## Getting started
 
@@ -53,11 +56,23 @@ To install OpenVMS VAX (power the VAX off to change the disks):
 
 OpenVMS passwords may only contain letters, digits, `$` and `_`.
 
+## Network
+
+The VAX has a DELQA Ethernet controller (`XQA0`, station address 08-00-2B-AA-BB-CC) on
+a private virtual network: the VAX is **10.0.2.15** (mask 255.255.255.0) and a gateway at
+**10.0.2.2** answers ARP and ping. There is no access to the Internet.
+
+The Carnegie Mellon TCP/IP stack for VMS, CMU-OpenVMS/IP V6.6-5, installs as described
+in [this OpenVMS Hobby guide](https://www.openvmshobby.com/vax-vms/carnegie-mellon-tcpip-vax/):
+answer `10.0.2.15`, `255.255.255.0` and `XQA0` to its address, mask and device questions.
+It starts with `@SYS$MANAGER:IP_STARTUP`, and `IPACP: Network online` appears on the
+console.
+
 ## License and credits
 
 Apache License 2.0. The processor, console and disk controller are a Rust translation
-of [SIMH](https://github.com/simh/simh) by Robert M Supnik (MIT-style license, see
-[NOTICE](NOTICE)). Terminal: [xterm.js](https://xtermjs.org/) (MIT).
+of [SIMH](https://github.com/simh/simh) by Robert M Supnik, and its Ethernet controller
+of SIMH's DELQA by David T. Hittner (MIT-style licenses, see [NOTICE](NOTICE)). Terminal: [xterm.js](https://xtermjs.org/) (MIT).
 
 DEC firmware and software (console ROM, diagnostics, OpenVMS) are © Digital Equipment
 Corporation and its successors; none of them is part of this project.

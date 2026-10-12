@@ -17,7 +17,10 @@ modèle 200.
   série de la console, temporisateurs, horloge, adaptateur Qbus.
 - **Disques** : contrôleur MSCP à quatre lecteurs (DUA0-DUA3) : disques RA et un CD-ROM
   RRD40. **OpenVMS VAX V7.1 s'installe depuis son CD**, démarre et accepte les connexions.
-- **À venir** : l'identité du VAX 4000-200 (KA660), Ethernet.
+- **Réseau** : contrôleur Ethernet DELQA (XQA0) sur un réseau virtuel privé.
+  **CMU-OpenVMS/IP** (TCP/IP) s'installe et fonctionne.
+- **À venir** : un terminal telnet vers le VAX dans la page, l'identité du VAX 4000-200
+  (KA660).
 
 ## Pour commencer
 
@@ -57,11 +60,24 @@ Pour installer OpenVMS VAX (éteignez le VAX pour changer les disques) :
 
 Les mots de passe d'OpenVMS ne peuvent contenir que des lettres, des chiffres, `$` et `_`.
 
+## Réseau
+
+Le VAX a un contrôleur Ethernet DELQA (`XQA0`, adresse de station 08-00-2B-AA-BB-CC) sur
+un réseau virtuel privé : le VAX est **10.0.2.15** (masque 255.255.255.0) et une
+passerelle, **10.0.2.2**, répond à l'ARP et au ping. Il n'y a pas d'accès à Internet.
+
+La pile TCP/IP de Carnegie Mellon pour VMS, CMU-OpenVMS/IP V6.6-5, s'installe comme
+l'explique [ce guide d'OpenVMS Hobby](https://www.openvmshobby.com/vax-vms/carnegie-mellon-tcpip-vax/) :
+répondez `10.0.2.15`, `255.255.255.0` et `XQA0` aux questions de l'adresse, du masque et
+du périphérique. Elle démarre par `@SYS$MANAGER:IP_STARTUP`, et `IPACP: Network online`
+paraît à la console.
+
 ## Licence et remerciements
 
 Licence Apache 2.0. Le processeur, la console et le contrôleur de disques sont une
-traduction en Rust de [SIMH](https://github.com/simh/simh) de Robert M Supnik (licence de
-type MIT, voir [NOTICE](NOTICE)). Terminal : [xterm.js](https://xtermjs.org/) (MIT).
+traduction en Rust de [SIMH](https://github.com/simh/simh) de Robert M Supnik, et son
+contrôleur Ethernet, du DELQA de SIMH de David T. Hittner (licences de type MIT, voir
+[NOTICE](NOTICE)). Terminal : [xterm.js](https://xtermjs.org/) (MIT).
 
 Le microprogramme et les logiciels de DEC (ROM de la console, diagnostics, OpenVMS) sont
 © Digital Equipment Corporation et ses successeurs; aucun ne fait partie de ce projet.
