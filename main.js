@@ -4,10 +4,10 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=1fa7bbc0';
-import { initFiles, openFiles, filesReply, filesPowerChanged } from './files.js?v=1fa7bbc0';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=44f15b6f';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=44f15b6f';
 
-const VERSION = '0.4.1';
+const VERSION = '0.5.0';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -547,10 +547,13 @@ function onWorkerMessage(e) {
       filesReply(msg);
       break;
     case 'tcp':
-      telnetInput(msg.bytes);
+      // Canal 1 : la session cachée du gestionnaire de fichiers.
+      if (msg.ch) filesTcp(msg);
+      else telnetInput(msg.bytes);
       break;
     case 'tcpState':
-      telnetStateChanged(msg.state, msg.ip);
+      if (msg.ch) filesTcp(msg);
+      else telnetStateChanged(msg.state, msg.ip);
       break;
     case 'swapped':
       swapDone?.();

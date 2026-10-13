@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=1fa7bbc0">
-  <link rel="stylesheet" href="style.css?v=1fa7bbc0">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=44f15b6f">
+  <link rel="stylesheet" href="style.css?v=44f15b6f">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -387,7 +387,11 @@
       <button id="files-close" type="button" class="icon-button" title="Close" data-i18n-title="fs.close" aria-label="Close" data-i18n-aria="fs.close">
         <svg class="icon"><use href="#i-x"/></svg></button>
     </div>
-    <p id="files-notice" class="warning" hidden></p>
+    <div id="files-notice" class="files-notice" hidden>
+      <span id="files-notice-text" class="warning"></span>
+      <button id="files-connect" type="button" class="secondary small-button" data-i18n="fs.vms.connect" hidden>Modify through OpenVMS…</button>
+      <button id="files-disconnect" type="button" class="secondary small-button" data-i18n="fs.vms.disconnect" hidden>Disconnect</button>
+    </div>
     <div id="files-browse">
       <div id="files-path" class="files-path"></div>
       <div class="files-tools">
@@ -454,6 +458,22 @@
     </form>
   </dialog>
 
+  <dialog id="files-login" class="dialog files-small">
+    <form method="dialog">
+      <h2 data-i18n="fs.vms.login.title">OpenVMS session</h2>
+      <p class="hint" data-i18n="fs.vms.login.hint"></p>
+      <label class="field"><span data-i18n="fs.vms.user">Username</span>
+        <input id="files-login-user" type="text" value="SYSTEM" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+      <label class="field"><span data-i18n="fs.vms.password">Password</span>
+        <input id="files-login-password" type="password" autocomplete="off"></label>
+      <div class="dialog-actions">
+        <span class="spacer"></span>
+        <button type="submit" value="cancel" class="secondary" formnovalidate data-i18n="fs.cancel">Cancel</button>
+        <button type="submit" value="ok" data-i18n="fs.vms.login.ok">Connect</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="files-props-dialog" class="dialog files-small">
     <form method="dialog">
       <h2 data-i18n="fs.props">Properties</h2>
@@ -492,7 +512,7 @@
       </div>
     </form>
   </dialog>
-  <script src="vendor/xterm/xterm.js?v=1fa7bbc0"></script>
-  <script type="module" src="main.js?v=1fa7bbc0"></script>
+  <script src="vendor/xterm/xterm.js?v=44f15b6f"></script>
+  <script type="module" src="main.js?v=44f15b6f"></script>
 </body>
 </html>

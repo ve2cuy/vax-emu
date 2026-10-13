@@ -6,8 +6,9 @@
 // turbo {on} (quand le VAX travaille — calcul, disques, console —, le temps simulé va aussi
 // vite que le fureteur le permet; quand il attend sans rien faire, retour au temps réel), speed {factor} (vitesse du processeur : ×1 = 10 MIPS; pas encore offerte dans la page :
 // le fureteur plafonne vers 16 MIPS et la boucle d'attente de VMS n'est pas reconnue),
-// tcpOpen {port} (connexion telnet de la page vers le VAX; répond tcpState {state, ip} puis
-// tcp {bytes} à chaque arrivée), tcpSend {bytes}, tcpClose,
+// tcpOpen {port, ch} (connexion TCP de la page vers le VAX sur le canal `ch` : 0, l'onglet
+// Telnet; 1, la session du gestionnaire de fichiers; répond tcpState {ch, state, ip} puis
+// tcp {ch, bytes} à chaque arrivée), tcpSend {ch, bytes}, tcpClose {ch},
 // flush (écrit tout de suite les images et la NVR : onglet quitté), swap {unit, drive, file} (change l'image d'un lecteur machine en marche; file nul : retire;
 // répond swapped {unit}).
 // Messages envoyés : ready, output {bytes}, stats {mips, simMs, io [[lus, écrits] × 4]},
@@ -22,8 +23,8 @@
 // Disques : fichiers de l'OPFS (dossier « disks »), ouverts en accès synchrone et branchés
 // sur les lecteurs MSCP (disks : [{unit, drive, file}]).
 
-import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=1fa7bbc0';
-import { fsRun, fsError } from './fs-ops.js?v=1fa7bbc0';
+import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=44f15b6f';
+import { fsRun, fsError } from './fs-ops.js?v=44f15b6f';
 
 const version = new URL(import.meta.url).search; // ?v=… transmis par la page
 let ready = null;
@@ -39,8 +40,7 @@ let handles = new Map();   // lecteur -> accès synchrone OPFS ouvert (fermés �
 let diskObjs = new Map();  // lecteur -> image présentée à la machine (gestionnaire de fichiers)
 let bridgeUrl = null;
 let turbo = false;
-let tcpId = 0;           // connexion telnet de la page (0 : aucune)
-let tcpState = -1;
+const tcps = new Map();  // canal -> {id, state} : connexions TCP de la page vers le VAX
 let burst = false;       // Turbo : en rafale (temps simulé détaché du temps réel)
 let lastActivity = 0;    // dernière activité du VAX (temps réel)
 let lastIo = 0;
@@ -119,17 +119,19 @@ function closeBridge() {
   try { ws?.close(); } catch { /* déjà fermé */ }
 }
 
-/** Connexion telnet de la page : données arrivées et changements d'état. */
+/** Connexions TCP de la page : données arrivées et changements d'état. */
 function pollTcp() {
-  const data = emu.net_recv(tcpId);
-  if (data.length) post({ type: 'tcp', bytes: data }, [data.buffer]);
-  const state = emu.net_state(tcpId);
-  if (state !== tcpState) {
-    tcpState = state;
-    post({ type: 'tcpState', state: ['connecting', 'open', 'closed'][state], ip: emu.net_guest_ip() });
-    if (state === 2) {
-      emu.net_close(tcpId);
-      tcpId = 0;
+  for (const [ch, c] of tcps) {
+    const data = emu.net_recv(c.id);
+    if (data.length) post({ type: 'tcp', ch, bytes: data }, [data.buffer]);
+    const state = emu.net_state(c.id);
+    if (state !== c.state) {
+      c.state = state;
+      post({ type: 'tcpState', ch, state: ['connecting', 'open', 'closed'][state], ip: emu.net_guest_ip() });
+      if (state === 2) {
+        emu.net_close(c.id);
+        tcps.delete(ch);
+      }
     }
   }
 }
@@ -239,7 +241,7 @@ function tick() {
     sim = next;
   }
   if (emu) sendFrames();
-  if (tcpId) pollTcp();
+  if (tcps.size) pollTcp();
   const out = emu.take_output();
   if (out.length) post({ type: 'output', bytes: out }, [out.buffer]);
 
@@ -289,7 +291,7 @@ self.onmessage = async (e) => {
         if (emu) emu.free();
         closeDisks();
         emu = new Emulator(msg.mem);
-        tcpId = 0;
+        tcps.clear();
         for (const d of msg.disks ?? []) {
           try {
             emu.attach_disk(d.unit, d.drive, await openDisk(d.file, d.unit));
@@ -337,22 +339,27 @@ self.onmessage = async (e) => {
         break;
       case 'tcpOpen':
         if (emu) {
-          if (tcpId) emu.net_close(tcpId);
-          tcpId = emu.net_connect(msg.port);
-          tcpState = -1;
+          const ch = msg.ch ?? 0;
+          const old = tcps.get(ch);
+          if (old) emu.net_close(old.id);
+          tcps.set(ch, { id: emu.net_connect(msg.port), state: -1 });
         }
         break;
-      case 'tcpSend':
-        if (emu && tcpId) emu.net_send(tcpId, msg.bytes);
+      case 'tcpSend': {
+        const c = tcps.get(msg.ch ?? 0);
+        if (emu && c) emu.net_send(c.id, msg.bytes);
         break;
-      case 'tcpClose':
-        if (emu && tcpId) {
-          emu.net_close(tcpId);
-          tcpId = 0;
-          tcpState = 2;
-          post({ type: 'tcpState', state: 'closed', ip: emu.net_guest_ip() });
+      }
+      case 'tcpClose': {
+        const ch = msg.ch ?? 0;
+        const c = tcps.get(ch);
+        if (emu && c) {
+          emu.net_close(c.id);
+          tcps.delete(ch);
+          post({ type: 'tcpState', ch, state: 'closed', ip: emu.net_guest_ip() });
         }
         break;
+      }
       case 'flush':
         if (emu) {
           emu.flush_disks();

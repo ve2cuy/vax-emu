@@ -2,9 +2,11 @@
 // images branchées sur les lecteurs. Le travail sur le volume est fait par le module wasm
 // (crates/ods2), dans un fil : fs-worker.js quand le VAX est éteint (lecture et écriture),
 // le fil de la machine quand il est en marche (lecture seule : VMS a le disque monté et
-// réécrirait par-dessus nos modifications).
+// réécrirait par-dessus nos modifications). VAX en marche, on peut aussi passer par OpenVMS
+// lui-même : une session telnet cachée exécute les opérations (vms-files.js).
 
-import { t } from './i18n.js?v=1fa7bbc0';
+import { t } from './i18n.js?v=44f15b6f';
+import { VmsSession, vmsRun, childDir } from './vms-files.js?v=44f15b6f';
 
 let ctx = null;          // { disks(), running(), worker(), version }
 let fsWorker = null;
@@ -22,7 +24,9 @@ const state = {
   filter: '',
   clipboard: null,       // {mode: 'copy' | 'move', unit, items: [{dir, name, version, num, seq}]}
   editing: null,         // {name, like, isNew}
+  session: null,         // session OpenVMS ouverte (VAX en marche), sinon null
 };
+let connectWait = null;  // attente de l'ouverture de la connexion de la session
 
 const $ = (id) => document.getElementById(id);
 const RFM = ['UDF', 'FIX', 'VAR', 'VFC', 'STM', 'STMLF', 'STMCR'];
@@ -44,7 +48,18 @@ export function filesReply(msg) {
   settle(msg);
 }
 
+/** Vrai quand les opérations passent par la session OpenVMS. */
+function viaVms() {
+  return ctx.running() && !!state.session?.open;
+}
+
+/** Ce qui désigne un fichier pour les deux modes : identificateur (direct) et nom complet (VMS). */
+function fidOf(e) {
+  return { num: e.num, seq: e.seq, spec: e.spec };
+}
+
 function call(op, args = {}) {
+  if (viaVms()) return vmsRun(state.session, op, op === 'info' ? { device: `DUA${state.unit}:` } : args);
   const d = ctx.disks()[state.unit];
   if (!d?.file) return Promise.reject(new Error('fs.noDisk|'));
   const id = ++callId;
@@ -69,7 +84,9 @@ function call(op, args = {}) {
 /** « code|détail » → message traduit. */
 function errorText(e) {
   const raw = e?.message ?? String(e);
-  const [code, detail = ''] = raw.split('|');
+  const bar = raw.indexOf('|');
+  const code = bar < 0 ? raw : raw.slice(0, bar);
+  const detail = bar < 0 ? '' : raw.slice(bar + 1);
   const key = `fs.err.${code.replace(/^(ods2|fs)\./, '')}`;
   const text = t(key, { detail });
   return text === key ? raw : text;
@@ -93,6 +110,7 @@ async function guard(fn) {
 // ------------------------------------------------------------------ état et affichage
 
 function readOnly() {
+  if (viaVms()) return false;
   return ctx.running() || ctx.disks()[state.unit]?.drive === 'RRD40';
 }
 
@@ -150,9 +168,12 @@ function render() {
     ? t('fs.space', { free: state.info.free.toLocaleString(), blocks: state.info.blocks.toLocaleString(), mb: Math.round(state.info.free / 2048) })
     : '';
   $('files-filter').placeholder = t('fs.filter');
-  const notice = $('files-notice');
-  notice.hidden = !ro;
-  notice.textContent = ctx.running() ? t('fs.readOnly.running') : t('fs.readOnly.cd');
+  const vms = viaVms();
+  $('files-notice').hidden = !ro && !vms;
+  $('files-notice-text').textContent = vms ? t('fs.vms.notice', { user: state.session.user })
+    : ctx.running() ? t('fs.readOnly.running') : t('fs.readOnly.cd');
+  $('files-connect').hidden = vms || !ctx.running();
+  $('files-disconnect').hidden = !vms;
 
   // Fil d'Ariane.
   const crumbs = $('files-path');
@@ -226,7 +247,7 @@ function render() {
       tr.append(
         cell(`${e.used}/${e.alloc}`, 'num'),
         cell(e.revised, 'date'),
-        cell(`[${octal(e.group)},${octal(e.member)}]`, 'owner'),
+        cell(e.ownerText ?? `[${octal(e.group)},${octal(e.member)}]`, 'owner'),
         cell(e.prot, 'prot'),
       );
     }
@@ -272,7 +293,7 @@ async function load(keepStatus = false) {
     state.info ??= await call('info');
     if (state.path.length === 0) state.path = [{ ...state.info.mfd, name: '000000' }];
     const dir = cur();
-    const r = await call('list', { num: dir.num, seq: dir.seq });
+    const r = await call('list', dir);
     state.entries = r.entries;
     state.versions = r.versions;
   });
@@ -326,21 +347,24 @@ function showPane(which) {
 async function openEntry(e) {
   if (e.lost) return;
   if (e.dir) {
-    state.path.push({ num: e.num, seq: e.seq, name: e.name.replace(/\.DIR$/, '') });
+    const name = e.name.replace(/\.DIR$/, '');
+    state.path.push({ num: e.num, seq: e.seq, name, spec: e.vms ? childDir(cur().spec, name) : undefined });
     clearFilter();
     await load();
     return;
   }
   await guard(async () => {
     status(t('fs.reading', { name: keyOf(e) }));
-    const fid = { num: e.num, seq: e.seq };
+    const fid = fidOf(e);
     const area = $('files-text');
     const isText = e.size <= EDIT_MAX && (await call('isText', fid));
+    // Par OpenVMS : seuls les textes passent par la session.
+    if (!isText && e.vms) throw new Error('fs.vmsBinary|');
     if (isText) {
       area.value = await call('readText', fid);
       area.readOnly = readOnly();
       state.editing = { name: e.name, like: fid, isNew: false, text: true };
-      $('files-editor-info').textContent = t('fs.editor.info', { format: RFM[e.rfm] ?? e.rfm, size: e.size.toLocaleString() });
+      $('files-editor-info').textContent = t(e.vms ? 'fs.editor.vms' : 'fs.editor.info', { format: RFM[e.rfm] ?? e.rfm, size: e.size.toLocaleString() });
     } else {
       const bytes = await call('read', { ...fid, limit: HEX_MAX });
       area.value = hexDump(bytes);
@@ -434,9 +458,9 @@ async function exportFiles(list) {
   for (const e of list) {
     await guard(async () => {
       status(t('fs.reading', { name: keyOf(e) }));
-      const fid = { num: e.num, seq: e.seq };
+      const fid = fidOf(e);
       // Fichier à enregistrements (VAR, VFC) : le texte, une ligne par enregistrement.
-      const records = e.rfm === 2 || e.rfm === 3;
+      const records = e.vms || e.rfm === 2 || e.rfm === 3;
       if (records && (await call('isText', fid))) download(e.name, [await call('readText', fid)], 'text/plain');
       else download(e.name, [await call('read', fid)], 'application/octet-stream');
       status(t('fs.exported', { name: e.name }));
@@ -477,7 +501,7 @@ async function paste() {
   const clip = state.clipboard;
   const to = cur();
   const ops = clip.items.map((it) => (clip.mode === 'copy'
-    ? { op: 'copy', args: { num: it.num, seq: it.seq, to, toName: it.name } }
+    ? { op: 'copy', args: { num: it.num, seq: it.seq, spec: it.spec, to, toName: it.name } }
     : { op: 'rename', args: { dir: it.dir, name: it.name, version: it.version, to, toName: it.name } }));
   await guard(async () => {
     await call('batch', { ops });
@@ -491,7 +515,7 @@ function toClipboard(mode) {
   const dir = cur();
   const items = selection().filter((e) => !e.lost && (mode === 'move' || !e.dir))
     .flatMap((e) => (mode === 'move' ? versionsOf(e) : [e]))
-    .map((e) => ({ dir, name: e.name, version: e.version, num: e.num, seq: e.seq }));
+    .map((e) => ({ dir, name: e.name, version: e.version, num: e.num, seq: e.seq, spec: e.spec }));
   state.clipboard = { mode, unit: state.unit, items };
   status(t(mode === 'copy' ? 'fs.clip.copy' : 'fs.clip.move', { n: items.length }));
   buttons();
@@ -583,7 +607,7 @@ async function saveProps(e) {
     status(t('fs.err.badOwner'), true);
     return;
   }
-  const fid = { num: e.num, seq: e.seq };
+  const fid = fidOf(e);
   const ops = [];
   if (prot !== e.prot || group !== e.group || member !== e.member) ops.push({ op: 'security', args: { ...fid, prot, group, member } });
   if (e.dir) {
@@ -647,8 +671,84 @@ export async function openFiles(unit = null) {
   await load();
 }
 
+// ------------------------------------------------------------------ session OpenVMS
+
+const VMS_CHANNEL = 1;   // canal TCP du fil de la machine réservé à cette session
+
+/** Octets et états de la connexion de la session, remis par main.js. */
+export function filesTcp(msg) {
+  if (msg.type === 'tcp') {
+    state.session?.feed(msg.bytes);
+    return;
+  }
+  if (msg.state === 'open') connectWait?.resolve();
+  if (msg.state !== 'closed') return;
+  connectWait?.reject(new Error('fs.vmsNoNet|'));
+  const s = state.session;
+  if (!s) return;
+  const was = s.open;
+  s.closed();
+  state.session = null;
+  if (was && $('files').open) {
+    openFiles(state.unit).then(() => status(t('fs.vms.ended')));
+  }
+}
+
+function dropSession() {
+  const s = state.session;
+  state.session = null;
+  if (!s) return;
+  s.logout();
+  s.closed();
+  ctx.worker()?.postMessage({ type: 'tcpClose', ch: VMS_CHANNEL });
+}
+
+/** Demande le compte, ouvre la connexion telnet cachée et s'y connecte. */
+async function connectVms() {
+  const dlg = $('files-login');
+  $('files-login-password').value = '';
+  const ok = await new Promise((resolve) => {
+    dlg.returnValue = '';
+    dlg.onclose = () => resolve(dlg.returnValue === 'ok');
+    dlg.showModal();
+    $('files-login-password').focus();
+  });
+  const user = $('files-login-user').value;
+  const password = $('files-login-password').value;
+  $('files-login-password').value = '';
+  if (!ok) return;
+  const worker = ctx.worker();
+  if (!worker) return;
+  const s = new VmsSession((bytes) => ctx.worker()?.postMessage({ type: 'tcpSend', ch: VMS_CHANNEL, bytes: new Uint8Array(bytes) }));
+  status(t('fs.vms.connecting'));
+  try {
+    const opened = new Promise((resolve, reject) => {
+      connectWait = { resolve, reject };
+      setTimeout(() => reject(new Error('fs.vmsNoNet|')), 30000);
+    });
+    state.session = s;
+    worker.postMessage({ type: 'tcpOpen', port: 23, ch: VMS_CHANNEL });
+    await opened;
+    connectWait = null;
+    await s.login(user, password);
+  } catch (e) {
+    connectWait = null;
+    state.session = null;
+    s.closed();
+    ctx.worker()?.postMessage({ type: 'tcpClose', ch: VMS_CHANNEL });
+    status(errorText(e), true);
+    return;
+  }
+  await openFiles(state.unit);
+  if (!$('files-status').classList.contains('error')) status(t('fs.vms.connected', { user: s.user }));
+}
+
 /** Le VAX vient d'être allumé ou éteint : droits d'écriture et contenu à revoir. */
 export function filesPowerChanged() {
+  if (state.session) {
+    state.session.closed();
+    state.session = null;
+  }
   for (const p of pending.values()) p.reject(new Error('fs.power|'));
   pending.clear();
   if ($('files')?.open) {
@@ -716,8 +816,10 @@ export function initFiles(context) {
   $('files-rename').addEventListener('click', renameSelection);
   $('files-delete').addEventListener('click', deleteSelection);
   $('files-purge').addEventListener('click', purgeSelection);
-  $('files-props').addEventListener('click', () => {
+  $('files-props').addEventListener('click', async () => {
     const e = selection()[0];
+    // Par OpenVMS, la liste ne donne pas tout : le reste des attributs est demandé ici.
+    if (e.vms && !(await guard(async () => Object.assign(e, await call('stat', fidOf(e)))))) return;
     fillProps(e);
     const dlg = $('files-props-dialog');
     dlg.returnValue = '';
@@ -736,4 +838,9 @@ export function initFiles(context) {
     status('');
   });
   $('files-button').addEventListener('click', () => openFiles());
+  $('files-connect').addEventListener('click', connectVms);
+  $('files-disconnect').addEventListener('click', () => {
+    dropSession();
+    openFiles(state.unit);
+  });
 }

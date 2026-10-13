@@ -752,6 +752,10 @@ button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--error)
 .dialog.files { width: min(1040px, 96vw); height: min(780px, 92vh); max-height: 92vh; padding: 14px 16px; }
 .dialog.files[open] { display: flex; flex-direction: column; }
 .dialog.files-small { width: min(520px, 94vw); }
+.files-notice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 0; }
+.files-notice[hidden] { display: none; }
+.files-notice .warning { flex: 1 1 20em; margin: 0; }
+.files-small input[type=password] { width: 100%; }
 .files-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .files-head h2 { margin: 0; }
 .files-head select { width: auto; max-width: 16em; }

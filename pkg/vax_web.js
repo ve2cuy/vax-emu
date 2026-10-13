@@ -620,18 +620,18 @@ function __wbg_get_imports() {
         __wbg___wbindgen_throw_41e9ee4f547fc59a: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
-        __wbg_flush_dec95c8a097130dc: function(arg0) {
+        __wbg_flush_2dedf8826052d23e: function(arg0) {
             arg0.flush();
         },
-        __wbg_read_65c24193a3c71b1c: function(arg0, arg1, arg2, arg3) {
+        __wbg_read_3e743e802944ff27: function(arg0, arg1, arg2, arg3) {
             const ret = arg0.read(arg1, getArrayU8FromWasm0(arg2, arg3));
             return ret;
         },
-        __wbg_size_aea6d83fbd5d6481: function(arg0) {
+        __wbg_size_1dcf8ff7d5b2eb9a: function(arg0) {
             const ret = arg0.size();
             return ret;
         },
-        __wbg_write_a29973a66fae36a8: function(arg0, arg1, arg2, arg3) {
+        __wbg_write_777b406365baf29a: function(arg0, arg1, arg2, arg3) {
             const ret = arg0.write(arg1, getArrayU8FromWasm0(arg2, arg3));
             return ret;
         },

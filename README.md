@@ -208,9 +208,18 @@ format (Files-11 ODS-2) in the image itself.
 - **Properties**: protection (system, owner, group, world), owner (UIC), version limit,
   record format.
 
-Changes are only allowed with the **VAX powered off** (after a `SHUTDOWN`): OpenVMS keeps
-part of a mounted disk in memory and would write over them. While the VAX runs, the file
-manager stays open read-only. Every write operation was checked with OpenVMS's
+The file manager works in two ways:
+
+- **VAX powered off** (after a `SHUTDOWN`): direct access to the image, every operation.
+- **VAX running**: read-only in direct access (OpenVMS keeps part of a mounted disk in
+  memory and would write over changes). The **Modify through OpenVMS…** button then opens
+  a hidden telnet session, with the account you give, and has OpenVMS itself do each
+  operation (`DIRECTORY`, `TYPE`, `CREATE`, `COPY`, `RENAME`, `DELETE`, `SET PROTECTION`…).
+  TCP/IP must be running. In this mode only text files can be opened, imported and
+  exported (lines of 255 characters at most); binary files are transferred with the VAX
+  powered off.
+
+For direct access, every write operation was checked with OpenVMS's
 `ANALYZE/DISK_STRUCTURE`; still, keep a copy of a disk you care about (the drive's
 download button) before changing it.
 

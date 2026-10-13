@@ -221,9 +221,18 @@ elle-même le format du volume (Files-11 ODS-2) dans l'image.
 - **Propriétés** : protection (système, propriétaire, groupe, monde), propriétaire (UIC),
   limite de versions, format d'enregistrement.
 
-Les modifications ne sont permises que **VAX éteint** (après un `SHUTDOWN`) : un disque
-qu'OpenVMS a monté est gardé en partie en mémoire, et VMS réécrirait par-dessus. VAX en
-marche, le gestionnaire reste ouvert en lecture seule. Chaque opération d'écriture a été
+Le gestionnaire a deux façons de travailler :
+
+- **VAX éteint** (après un `SHUTDOWN`) : accès direct à l'image, toutes les opérations.
+- **VAX en marche** : lecture seule en accès direct (un disque qu'OpenVMS a monté est gardé
+  en partie en mémoire, et VMS réécrirait par-dessus). Le bouton **Modifier par
+  OpenVMS…** ouvre alors une session telnet cachée, avec le compte que vous donnez, et
+  fait faire chaque opération par OpenVMS lui-même (`DIRECTORY`, `TYPE`, `CREATE`, `COPY`,
+  `RENAME`, `DELETE`, `SET PROTECTION`…). Il faut TCP/IP en marche. Dans ce mode, seuls
+  les fichiers texte s'ouvrent, s'importent et s'exportent (lignes de 255 caractères au
+  plus); les fichiers binaires se transfèrent VAX éteint.
+
+Pour l'accès direct, chaque opération d'écriture a été
 vérifiée par `ANALYZE/DISK_STRUCTURE` d'OpenVMS; gardez tout de même une copie d'un disque
 auquel vous tenez (bouton de téléchargement du lecteur) avant de le modifier.
 
