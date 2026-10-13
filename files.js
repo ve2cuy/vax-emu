@@ -4,7 +4,7 @@
 // le fil de la machine quand il est en marche (lecture seule : VMS a le disque monté et
 // réécrirait par-dessus nos modifications).
 
-import { t } from './i18n.js';
+import { t } from './i18n.js?v=c7d3991f';
 
 let ctx = null;          // { disks(), running(), worker(), version }
 let fsWorker = null;

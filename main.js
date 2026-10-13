@@ -4,10 +4,10 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js';
-import { initFiles, openFiles, filesReply, filesPowerChanged } from './files.js';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=c7d3991f';
+import { initFiles, openFiles, filesReply, filesPowerChanged } from './files.js?v=c7d3991f';
 
-const VERSION = '0.4.0';
+const VERSION = '0.4.1';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -446,7 +446,9 @@ async function powerOn() {
   for (const d of prefs.disks) if (d?.missing) delete d.missing;   // revérifié par le fil
   worker = new Worker(`worker.js${V}`, { type: 'module' });
   worker.onmessage = onWorkerMessage;
-  worker.onerror = (e) => showStatus('error', { msg: e.message ?? 'worker' });
+  // Le fichier et la ligne aident à comprendre un « Script error » (module introuvable ou
+  // périmé dans le cache du fureteur).
+  worker.onerror = (e) => showStatus('error', { msg: `${e.message ?? 'worker'}${e.filename ? ` (${e.filename.split('/').pop()}:${e.lineno})` : ' (worker.js)'}` });
   worker.postMessage({
     type: 'start',
     rom: rom.bytes.slice(),
@@ -812,7 +814,7 @@ async function openWriter(file) {
     const out = await fh.createWritable();
     return { write: (chunk) => out.write(chunk), close: () => out.close() };
   }
-  const writer = new Worker(new URL('./opfs-writer.js', import.meta.url));
+  const writer = new Worker(new URL(`./opfs-writer.js${V}`, import.meta.url));
   const ask = (msg, transfer = []) => new Promise((resolve, reject) => {
     writer.onmessage = ({ data }) => (data.ok ? resolve() : reject(new Error(data.msg)));
     writer.onerror = (e) => reject(new Error(e.message || 'opfs-writer.js'));
