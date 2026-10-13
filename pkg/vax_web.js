@@ -12,7 +12,6 @@ export class Emulator {
         wasm.__wbg_emulator_free(ptr, 0);
     }
     /**
-     * Branche une image sur le lecteur MSCP `unit` (DUA0-DUA3), type `drive` (RA82, RRD40...).
      * @param {number} unit
      * @param {string} drive
      * @param {any} disk
@@ -24,6 +23,13 @@ export class Emulator {
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
+    }
+    /**
+     * Retire l'image du lecteur `unit` (machine en marche : changement de CD à chaud).
+     * @param {number} unit
+     */
+    detach_disk(unit) {
+        wasm.emulator_detach_disk(this.__wbg_ptr, unit);
     }
     /**
      * Octets lus sur le lecteur `unit` depuis la mise sous tension.
@@ -165,6 +171,17 @@ export class Emulator {
         wasm.emulator_send_break(this.__wbg_ptr);
     }
     /**
+     * Branche une image sur le lecteur MSCP `unit` (DUA0-DUA3), type `drive` (RA82, RRD40...).
+     * Vitesse du processeur : `factor` fois la vitesse normale (100 ns par instruction hors
+     * du ROM, soit 10 MIPS). L'horloge de VMS reste à l'heure; seul le nombre
+     * d'instructions par seconde change (si le fureteur suit). Le ROM garde 1 µs par
+     * instruction (ses boucles de temporisation en dépendent).
+     * @param {number} factor
+     */
+    set_speed(factor) {
+        wasm.emulator_set_speed(this.__wbg_ptr, factor);
+    }
+    /**
      * Heure de l'horloge TOY : secondes depuis le 1er janvier (heure locale), centièmes.
      * @param {number} year_secs
      * @param {number} centis
@@ -226,18 +243,18 @@ function __wbg_get_imports() {
         __wbg___wbindgen_throw_41e9ee4f547fc59a: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
-        __wbg_flush_c74cf912ae8b3c0b: function(arg0) {
+        __wbg_flush_eed85b6b865ed5e8: function(arg0) {
             arg0.flush();
         },
-        __wbg_read_e0af511ec87340d3: function(arg0, arg1, arg2, arg3) {
+        __wbg_read_783d75c9538cb3db: function(arg0, arg1, arg2, arg3) {
             const ret = arg0.read(arg1, getArrayU8FromWasm0(arg2, arg3));
             return ret;
         },
-        __wbg_size_da844295afd33d84: function(arg0) {
+        __wbg_size_060689551a566bf3: function(arg0) {
             const ret = arg0.size();
             return ret;
         },
-        __wbg_write_6ee0d45ca7a9a15c: function(arg0, arg1, arg2, arg3) {
+        __wbg_write_ea072c033626e43d: function(arg0, arg1, arg2, arg3) {
             const ret = arg0.write(arg1, getArrayU8FromWasm0(arg2, arg3));
             return ret;
         },

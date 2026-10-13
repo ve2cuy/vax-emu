@@ -3,6 +3,7 @@
 export const memory: WebAssembly.Memory;
 export const __wbg_emulator_free: (a: number, b: number) => void;
 export const emulator_attach_disk: (a: number, b: number, c: number, d: number, e: any) => [number, number];
+export const emulator_detach_disk: (a: number, b: number) => void;
 export const emulator_disk_read: (a: number, b: number) => number;
 export const emulator_disk_written: (a: number, b: number) => number;
 export const emulator_drive_blocks: (a: number, b: number) => number;
@@ -18,6 +19,7 @@ export const emulator_nvr: (a: number) => [number, number];
 export const emulator_power_up: (a: number) => void;
 export const emulator_run: (a: number, b: number, c: number) => number;
 export const emulator_send_break: (a: number) => void;
+export const emulator_set_speed: (a: number, b: number) => void;
 export const emulator_set_time: (a: number, b: number, c: number) => void;
 export const emulator_stop_reason: (a: number) => [number, number];
 export const emulator_take_instructions: (a: number) => number;

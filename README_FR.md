@@ -60,8 +60,14 @@ Le menu **Réseau** choisit comment le contrôleur Ethernet du VAX (XQA0) est br
   VAX l'adresse 10.0.2.15.
 - **Pont local** : le VAX paraît sur votre réseau local avec sa propre adresse (réglée dans
   OpenVMS, ex. 192.168.2.77), grâce au petit relais *vax-bridge* qui tourne sur votre PC
-  (Windows, avec [Npcap](https://npcap.com)). Les autres ordinateurs peuvent alors le
+  (Windows, avec [Npcap](https://npcap.com); `vax-bridge.exe` est dans la page
+  [Releases](https://github.com/ve2cuy/vax-emu/releases) : lancez
+  `vax-bridge --iface <adresse de votre PC>`). Les autres ordinateurs peuvent alors le
   « pinger » et s'y connecter par telnet; votre PC joint son telnet à `localhost:2323`.
+
+L'icône du livre, dans la barre du haut, ouvre un **aide-mémoire OpenVMS** : commandes DCL
+de base, répertoires importants, et comment changer l'adresse TCP/IP, la passerelle ou
+les serveurs de noms.
 
 ## Disques et OpenVMS
 

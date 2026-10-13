@@ -4,10 +4,11 @@
 export class Emulator {
     free(): void;
     [Symbol.dispose](): void;
-    /**
-     * Branche une image sur le lecteur MSCP `unit` (DUA0-DUA3), type `drive` (RA82, RRD40...).
-     */
     attach_disk(unit: number, drive: string, disk: any): void;
+    /**
+     * Retire l'image du lecteur `unit` (machine en marche : changement de CD à chaud).
+     */
+    detach_disk(unit: number): void;
     /**
      * Octets lus sur le lecteur `unit` depuis la mise sous tension.
      */
@@ -64,6 +65,14 @@ export class Emulator {
      */
     send_break(): void;
     /**
+     * Branche une image sur le lecteur MSCP `unit` (DUA0-DUA3), type `drive` (RA82, RRD40...).
+     * Vitesse du processeur : `factor` fois la vitesse normale (100 ns par instruction hors
+     * du ROM, soit 10 MIPS). L'horloge de VMS reste à l'heure; seul le nombre
+     * d'instructions par seconde change (si le fureteur suit). Le ROM garde 1 µs par
+     * instruction (ses boucles de temporisation en dépendent).
+     */
+    set_speed(factor: number): void;
+    /**
      * Heure de l'horloge TOY : secondes depuis le 1er janvier (heure locale), centièmes.
      */
     set_time(year_secs: number, centis: number): void;
@@ -93,6 +102,7 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_emulator_free: (a: number, b: number) => void;
     readonly emulator_attach_disk: (a: number, b: number, c: number, d: number, e: any) => [number, number];
+    readonly emulator_detach_disk: (a: number, b: number) => void;
     readonly emulator_disk_read: (a: number, b: number) => number;
     readonly emulator_disk_written: (a: number, b: number) => number;
     readonly emulator_drive_blocks: (a: number, b: number) => number;
@@ -108,6 +118,7 @@ export interface InitOutput {
     readonly emulator_power_up: (a: number) => void;
     readonly emulator_run: (a: number, b: number, c: number) => number;
     readonly emulator_send_break: (a: number) => void;
+    readonly emulator_set_speed: (a: number, b: number) => void;
     readonly emulator_set_time: (a: number, b: number, c: number) => void;
     readonly emulator_stop_reason: (a: number) => [number, number];
     readonly emulator_take_instructions: (a: number) => number;

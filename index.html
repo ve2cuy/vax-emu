@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=9a2282dd">
-  <link rel="stylesheet" href="style.css?v=9a2282dd">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=db44e9c6">
+  <link rel="stylesheet" href="style.css?v=db44e9c6">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -52,6 +52,7 @@
       <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></symbol>
       <symbol id="i-eject" viewBox="0 0 24 24"><path d="M12 5l7 8H5zM5 18h14"/></symbol>
       <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M8 7h7M8 11h5"/></symbol>
       <symbol id="i-archive" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/></symbol>
       <symbol id="i-wand" viewBox="0 0 24 24"><path d="M4 20l10-10M14 6V3M18 10h3M17 7l2-2M11 4l1 1M19 13l1 1"/></symbol>
     </defs>
@@ -292,6 +293,10 @@
                   aria-label="Copy" data-i18n-aria="clip.copy">
             <svg class="icon"><use href="#i-copy"/></svg>
           </button>
+          <a id="cheatsheet" class="icon-button" href="cheatsheet.html" target="_blank" rel="noopener"
+             title="OpenVMS cheat sheet" data-i18n-title="cheatsheet" aria-label="OpenVMS cheat sheet" data-i18n-aria="cheatsheet">
+            <svg class="icon"><use href="#i-book"/></svg>
+          </a>
           <span class="toolbar-sep" aria-hidden="true"></span>
           <!-- Langue : liste native du fureteur, cachée sous un bouton compact (globe et code). -->
           <label class="lang-picker" title="Language" data-i18n-title="display.lang">
@@ -340,7 +345,7 @@
       </div>
     </main>
   </div>
-  <script src="vendor/xterm/xterm.js?v=9a2282dd"></script>
-  <script type="module" src="main.js?v=9a2282dd"></script>
+  <script src="vendor/xterm/xterm.js?v=db44e9c6"></script>
+  <script type="module" src="main.js?v=db44e9c6"></script>
 </body>
 </html>

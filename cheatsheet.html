@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aide-mémoire OpenVMS</title>
+  <meta name="color-scheme" content="light dark">
+  <script>
+    // Même thème que l'émulateur; langue : ?lang=, sinon celle de l'émulateur ou du fureteur.
+    try {
+      const prefs = JSON.parse(localStorage.getItem('vax-prefs') ?? '{}');
+      if (prefs.theme === 'light' || prefs.theme === 'dark') document.documentElement.dataset.theme = prefs.theme;
+      const lang = new URLSearchParams(location.search).get('lang') || prefs.lang || navigator.language || 'fr';
+      document.documentElement.lang = lang.startsWith('fr') ? 'fr' : 'en';
+    } catch { /* stockage indisponible */ }
+  </script>
+  <style>
+    :root { --bg: #eceef3; --surface: #fff; --surface-2: #f2f4f7; --border: #e2e5eb; --text: #1f2330;
+      --muted: #6b7286; --accent: #0aa8c9; --accent-ink: #087f99; --code: #0b5e70; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #15171c; --surface: #1f222a;
+      --surface-2: #282c35; --border: #2f333d; --text: #e6e8ec; --muted: #8d93a1; --accent: #22c3e6;
+      --accent-ink: #4fd3ef; --code: #7fe0f5; } }
+    :root[data-theme="dark"] { --bg: #15171c; --surface: #1f222a; --surface-2: #282c35; --border: #2f333d;
+      --text: #e6e8ec; --muted: #8d93a1; --accent: #22c3e6; --accent-ink: #4fd3ef; --code: #7fe0f5; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+      font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    article { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+    html[lang="fr"] article[lang="en"], html[lang="en"] article[lang="fr"] { display: none; }
+    header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    h1 { margin: 0 0 4px; font-size: 1.6rem; }
+    h2 { margin: 28px 0 10px; font-size: 1.15rem; color: var(--accent-ink); border-bottom: 2px solid var(--accent); padding-bottom: 4px; }
+    h3 { margin: 16px 0 6px; font-size: 1rem; }
+    p, li { color: var(--text); }
+    .muted { color: var(--muted); }
+    .lang a { color: var(--accent-ink); margin-left: 8px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 0 24px; }
+    @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+    table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden; font-size: 0.9rem; margin-bottom: 8px; }
+    th, td { text-align: left; vertical-align: top; padding: 6px 10px; border-top: 1px solid var(--border); }
+    th { background: var(--surface-2); font-weight: 600; }
+    tr:first-child th, tr:first-child td { border-top: 0; }
+    td:first-child { width: 48%; }
+    code, pre { font-family: "DejaVu Sans Mono", Consolas, "Courier New", monospace; color: var(--code); }
+    code { font-size: 0.88em; overflow-wrap: anywhere; }
+    pre { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+      overflow-x: auto; font-size: 0.85rem; margin: 6px 0 10px; }
+    .note { background: var(--surface); border-left: 4px solid var(--accent); padding: 8px 12px; border-radius: 4px; margin: 8px 0; }
+    @media print {
+      body { background: #fff; color: #000; font-size: 11px; }
+      .lang { display: none; }
+      h2 { break-after: avoid; }
+      table, pre { break-inside: avoid; }
+      code, pre { color: #000; }
+    }
+  </style>
+</head>
+<body>
+
+<article lang="fr">
+  <header>
+    <div>
+      <h1>Aide-mémoire OpenVMS VAX</h1>
+      <p class="muted">Commandes DCL de base, répertoires du système et TCP/IP (CMU-OpenVMS/IP), pour l'émulateur VAX de VE2CUY.</p>
+    </div>
+    <p class="lang"><a href="?lang=en">English</a> · <a href="javascript:print()">Imprimer</a></p>
+  </header>
+
+  <div class="note">Les commandes DCL s'abrègent (<code>DIR</code> pour <code>DIRECTORY</code>), et les majuscules ou minuscules n'ont pas d'importance. <code>HELP</code> donne l'aide de chaque commande, par exemple <code>HELP COPY</code>. Pour l'explication d'un message, utilisez <code>HELP/MESSAGE</code>, par exemple <code>HELP/MESSAGE MEDOFL</code>.</div>
+
+  <h2>Console du VAX (invite <code>&gt;&gt;&gt;</code>)</h2>
+  <div class="grid">
+    <table>
+      <tr><th>Commande</th><th>Effet</th></tr>
+      <tr><td><code>B DUA0</code></td><td>Amorcer (boot) le système installé sur DUA0</td></tr>
+      <tr><td><code>B DUA1</code></td><td>Amorcer un CD d'installation d'OpenVMS</td></tr>
+      <tr><td><code>SHOW DEVICE</code></td><td>Lecteurs (DUA0-3) et carte Ethernet (XQA0)</td></tr>
+      <tr><td><code>SHOW MEMORY</code> · <code>SHOW ETHERNET</code></td><td>Mémoire installée · adresse de station</td></tr>
+      <tr><td><code>SET BOOT DUA0</code></td><td>Périphérique d'amorçage par défaut</td></tr>
+    </table>
+    <table>
+      <tr><th>Touche / bouton</th><th>Effet</th></tr>
+      <tr><td>Bouton <strong>Arrêt</strong> ou <kbd>Ctrl+P</kbd></td><td>Arrêter le processeur et revenir à <code>&gt;&gt;&gt;</code> (BREAK)</td></tr>
+      <tr><td><code>C</code> (CONTINUE)</td><td>Reprendre là où le processeur s'était arrêté</td></tr>
+      <tr><td><code>B/R5:1 DUA0</code></td><td>Amorçage conversationnel (invite <code>SYSBOOT&gt;</code>)</td></tr>
+    </table>
+  </div>
+
+  <h2>Session et clavier</h2>
+  <div class="grid">
+    <table>
+      <tr><th>Commande</th><th>Effet</th></tr>
+      <tr><td><code>LOGOUT</code></td><td>Fermer la session</td></tr>
+      <tr><td><code>SET PASSWORD</code></td><td>Changer son mot de passe (A-Z, 0-9, $ et _ seulement)</td></tr>
+      <tr><td><code>SHOW TIME</code> · <code>SHOW USERS</code></td><td>Date et heure · usagers connectés</td></tr>
+      <tr><td><code>SET TERMINAL/DEVICE=VT100</code></td><td>Type de terminal (éditeurs plein écran)</td></tr>
+      <tr><td><code>RECALL/ALL</code></td><td>Commandes précédentes (aussi : flèche ↑)</td></tr>
+      <tr><td><code>SET PROCESS/PRIVILEGES=ALL</code></td><td>Activer tous ses privilèges (SYSTEM)</td></tr>
+    </table>
+    <table>
+      <tr><th>Touche</th><th>Effet</th></tr>
+      <tr><td><kbd>Ctrl+Y</kbd> · <kbd>Ctrl+C</kbd></td><td>Interrompre la commande en cours</td></tr>
+      <tr><td><kbd>Ctrl+Z</kbd></td><td>Fin de saisie (CREATE, utilitaires : quitter)</td></tr>
+      <tr><td><kbd>Ctrl+T</kbd></td><td>État du processus (temps, E/S)</td></tr>
+      <tr><td><kbd>Ctrl+U</kbd> · <kbd>Ctrl+R</kbd></td><td>Effacer · réafficher la ligne</td></tr>
+      <tr><td><kbd>Ctrl+S</kbd> · <kbd>Ctrl+Q</kbd></td><td>Suspendre · reprendre l'affichage</td></tr>
+      <tr><td><kbd>Ctrl+O</kbd></td><td>Supprimer / rétablir la sortie</td></tr>
+    </table>
+  </div>
+
+  <h2>Fichiers et répertoires</h2>
+  <p>Une spécification de fichier : <code>DUA0:[REPERTOIRE.SOUS]NOM.TYPE;version</code>. Chaque écriture crée une nouvelle version, et <code>;</code> seul désigne la plus récente. Jokers : <code>*</code> (plusieurs caractères), <code>%</code> (un caractère), <code>[...]</code> (tous les sous-répertoires), <code>[-]</code> (répertoire parent).</p>
+  <div class="grid">
+    <table>
+      <tr><th>Commande</th><th>Effet</th></tr>
+      <tr><td><code>DIRECTORY</code> · <code>DIR/SIZE/DATE</code> · <code>DIR/FULL</code></td><td>Lister les fichiers (taille en blocs de 512 octets)</td></tr>
+      <tr><td><code>DIR [...]*.COM</code></td><td>Chercher dans tous les sous-répertoires</td></tr>
+      <tr><td><code>TYPE NOTES.TXT</code> · <code>TYPE/PAGE</code></td><td>Afficher un fichier (page par page)</td></tr>
+      <tr><td><code>CREATE NOTES.TXT</code></td><td>Taper un fichier, terminer par <kbd>Ctrl+Z</kbd></td></tr>
+      <tr><td><code>COPY A.TXT B.TXT</code> · <code>RENAME A.TXT C.TXT</code></td><td>Copier · renommer (ou déplacer)</td></tr>
+      <tr><td><code>DELETE A.TXT;*</code></td><td>Effacer : la version est obligatoire</td></tr>
+      <tr><td><code>PURGE</code> · <code>PURGE/KEEP=2</code></td><td>Garder seulement la (ou les 2) dernière(s) version(s)</td></tr>
+      <tr><td><code>SEARCH *.COM IP_STARTUP</code></td><td>Chercher un texte dans des fichiers</td></tr>
+      <tr><td><code>DIFFERENCES A.TXT B.TXT</code></td><td>Comparer deux fichiers</td></tr>
+    </table>
+    <table>
+      <tr><th>Commande</th><th>Effet</th></tr>
+      <tr><td><code>SHOW DEFAULT</code></td><td>Répertoire courant</td></tr>
+      <tr><td><code>SET DEFAULT [.SOUS]</code> · <code>[-]</code> · <code>SYS$LOGIN</code></td><td>Descendre · remonter · revenir chez soi</td></tr>
+      <tr><td><code>CREATE/DIRECTORY [.TRAVAIL]</code></td><td>Créer un répertoire</td></tr>
+      <tr><td><code>SET PROTECTION=(W:RE) A.TXT</code></td><td>Permissions (System, Owner, Group, World)</td></tr>
+      <tr><td><code>EDIT/TPU A.TXT</code></td><td>Éditeur EVE (flèches); <kbd>Ctrl+Z</kbd> : enregistrer et quitter</td></tr>
+      <tr><td><code>EDIT/EDT A.TXT</code></td><td>Éditeur EDT (ligne : <code>EXIT</code>, <code>QUIT</code>)</td></tr>
+      <tr><td><code>DUMP/RECORDS A.DAT</code></td><td>Contenu en hexadécimal</td></tr>
+      <tr><td><code>SET FILE/ATTRIBUTES=(RFM:FIX,MRS:8192,LRL:8192) X.BCK</code></td><td>Rendre utilisable un save set copié d'un CD</td></tr>
+    </table>
+  </div>
+
+  <h2>Système, processus et disques</h2>
+  <div class="grid">
+    <table>
+      <tr><th>Commande</th><th>Effet</th></tr>
+      <tr><td><code>SHOW SYSTEM</code></td><td>Processus en marche</td></tr>
+      <tr><td><code>SHOW PROCESS/ALL</code> · <code>SHOW QUOTA</code></td><td>Son processus · son espace disque</td></tr>
+      <tr><td><code>STOP/ID=00000210</code></td><td>Arrêter un processus</td></tr>
+      <tr><td><code>MONITOR SYSTEM</code></td><td>Activité en direct (<kbd>Ctrl+Z</kbd> pour quitter)</td></tr>
+      <tr><td><code>SHOW MEMORY</code> · <code>SHOW ERROR</code></td><td>Mémoire · erreurs des périphériques</td></tr>
+      <tr><td><code>SHOW LICENSE</code></td><td>Licences (PAK) chargées</td></tr>
+      <tr><td><code>SHOW LOGICAL SYS$*</code> · <code>SHOW SYMBOL *</code></td><td>Noms logiques · symboles</td></tr>
+    </table>
+    <table>
+      <tr><th>Commande</th><th>Effet</th></tr>
+      <tr><td><code>SHOW DEVICE D</code> · <code>SHOW DEVICE DUA0/FULL</code></td><td>Disques, espace libre</td></tr>
+      <tr><td><code>MOUNT DUA1: OPENVMS071</code></td><td>Monter un CD (étiquette du volume)</td></tr>
+      <tr><td><code>MOUNT/OVERRIDE=IDENTIFICATION DUA1:</code></td><td>Monter sans connaître l'étiquette</td></tr>
+      <tr><td><code>MOUNT/MEDIA_FORMAT=CDROM DUA1: NOM</code></td><td>CD ISO 9660 (ex. fait avec mkiso)</td></tr>
+      <tr><td><code>DISMOUNT DUA1:</code></td><td>Démonter (avant d'éjecter dans la page)</td></tr>
+      <tr><td><code>INITIALIZE DUA2: DONNEES</code> puis <code>MOUNT/SYSTEM DUA2: DONNEES</code></td><td>Préparer un disque vierge (RA92 en DUA2)</td></tr>
+      <tr><td><code>BACKUP [TRAVAIL...]*.* DUA2:[SAUVE]T.BCK/SAVE_SET</code></td><td>Sauvegarde dans un save set</td></tr>
+    </table>
+  </div>
+
+  <h2>Comptes d'usagers (SYSTEM)</h2>
+<pre>$ SET DEFAULT SYS$SYSTEM
+$ RUN AUTHORIZE
+UAF&gt; ADD ALAIN /PASSWORD=TEMPO_1234 /UIC=[200,200] /DEVICE=SYS$SYSDEVICE: /DIRECTORY=[ALAIN] /OWNER="Alain"
+UAF&gt; SHOW ALAIN            ! aussi : MODIFY, REMOVE, LIST
+UAF&gt; EXIT
+$ CREATE/DIRECTORY SYS$SYSDEVICE:[ALAIN] /OWNER_UIC=[200,200]</pre>
+  <p class="muted">Sans clé de licence (PAK), VMS permet la connexion sur la console (OPA0). Les connexions par telnet passent aussi (CMU-OpenVMS/IP).</p>
+
+  <h2>Arrêter et redémarrer</h2>
+<pre>$ @SYS$SYSTEM:SHUTDOWN       ! répondre 0 minute, puis Retour aux questions
+                             ! « automatic system reboot » : YES pour redémarrer
+SYSTEM SHUTDOWN COMPLETE      ! alors seulement : bouton Arrêt (&gt;&gt;&gt;) ou Éteindre</pre>
+  <p>Mot de passe de SYSTEM oublié : <code>B/R5:1 DUA0</code>, puis <code>SYSBOOT&gt; SET WINDOW_SYSTEM 0</code>, <code>SET WRITESYSPARAMS 0</code>, <code>SET/STARTUP OPA0:</code> et <code>CONTINUE</code>. À l'invite <code>$</code> : <code>@SYS$SYSTEM:STARTUP</code>, puis <code>SET DEFAULT SYS$SYSTEM</code>, <code>RUN AUTHORIZE</code> et <code>MODIFY SYSTEM/PASSWORD=NOUVEAU_MP</code>. Redémarrez ensuite.</p>
+
+  <h2>Procédures, symboles et noms logiques</h2>
+  <div class="grid">
+    <table>
+      <tr><th>Commande</th><th>Effet</th></tr>
+      <tr><td><code>@FICHIER.COM</code></td><td>Exécuter une procédure de commandes</td></tr>
+      <tr><td><code>DIR :== DIRECTORY/SIZE/DATE</code></td><td>Symbole (abréviation) global</td></tr>
+      <tr><td><code>DEFINE TRAVAIL DUA2:[TRAVAIL]</code></td><td>Nom logique (puis <code>DIR TRAVAIL:</code>)</td></tr>
+      <tr><td><code>WRITE SYS$OUTPUT F$TIME()</code></td><td>Afficher une valeur (fonctions lexicales F$...)</td></tr>
+      <tr><td><code>WRITE SYS$OUTPUT F$GETSYI("NODENAME")</code></td><td>Nom du nœud (VAXEMU)</td></tr>
+    </table>
+    <table>
+      <tr><th>Fichier</th><th>Rôle</th></tr>
+      <tr><td><code>SYS$LOGIN:LOGIN.COM</code></td><td>Exécuté à chaque connexion de l'usager</td></tr>
+      <tr><td><code>SYS$MANAGER:SYLOGIN.COM</code></td><td>Exécuté à chaque connexion, pour tous</td></tr>
+      <tr><td><code>SYS$MANAGER:SYSTARTUP_VMS.COM</code></td><td>Démarrage du site (ex. <code>@SYS$MANAGER:IP_STARTUP</code>)</td></tr>
+      <tr><td><code>SUBMIT X.COM</code> · <code>SHOW QUEUE/ALL</code></td><td>Travail en lot · files d'attente</td></tr>
+    </table>
+  </div>
+
+  <h2>Répertoires importants</h2>
+  <p>Le disque système (<code>SYS$SYSDEVICE</code>, ici DUA0) contient la racine <code>[SYS0]</code>. Chaque nom logique ci-dessous cherche d'abord dans <code>SYS$SPECIFIC</code> (<code>[SYS0.SYSxxx]</code>), propre au nœud, puis dans <code>SYS$COMMON</code> (<code>[SYS0.SYSCOMMON.SYSxxx]</code>), partagé.</p>
+  <table>
+    <tr><th>Nom logique</th><th>Contenu</th></tr>
+    <tr><td><code>SYS$SYSTEM</code> ([SYSEXE])</td><td>Programmes du système; <code>SYSUAF.DAT</code> (comptes), <code>MODPARAMS.DAT</code> (paramètres pour AUTOGEN), <code>SHUTDOWN.COM</code>, <code>STARTUP.COM</code></td></tr>
+    <tr><td><code>SYS$MANAGER</code> ([SYSMGR])</td><td>Procédures du gestionnaire : <code>SYSTARTUP_VMS.COM</code>, <code>SYLOGIN.COM</code>, <code>OPERATOR.LOG</code>; TCP/IP : <code>IP_STARTUP.COM</code>, <code>INTERNET.CONFIG</code>, <code>NAMRES.CONFIG</code></td></tr>
+    <tr><td><code>SYS$STARTUP</code> ([SYS$STARTUP])</td><td>Démarrage des composants de VMS</td></tr>
+    <tr><td><code>SYS$LIBRARY</code> ([SYSLIB])</td><td>Bibliothèques partagées, <code>DCLTABLES.EXE</code> (verbes DCL)</td></tr>
+    <tr><td><code>SYS$HELP</code> ([SYSHLP])</td><td>Bibliothèques d'aide (<code>HELPLIB.HLB</code>), notes de version; CMU-IP : <code>[SYSHLP.DOC]</code></td></tr>
+    <tr><td><code>SYS$UPDATE</code> ([SYSUPD])</td><td><code>VMSINSTAL.COM</code> (installer un produit), <code>AUTOGEN.COM</code></td></tr>
+    <tr><td><code>SYS$ERRORLOG</code> ([SYSERR])</td><td>Journal des erreurs du matériel</td></tr>
+    <tr><td><code>SYS$LOGIN</code></td><td>Répertoire de l'usager (SYSTEM : <code>[SYSMGR]</code>)</td></tr>
+    <tr><td><code>SYS$EXAMPLES</code></td><td>Exemples de programmes</td></tr>
+  </table>
+  <p>Après un changement de <code>MODPARAMS.DAT</code> : <code>@SYS$UPDATE:AUTOGEN GETDATA REBOOT NOFEEDBACK</code>.</p>
+
+  <h2>TCP/IP (CMU-OpenVMS/IP)</h2>
+  <div class="grid">
+    <table>
+      <tr><th>Commande</th><th>Effet</th></tr>
+      <tr><td><code>TELNET 10.0.2.2</code> · <code>TELNET hôte/PORT=80</code></td><td>Session telnet · essai d'un port TCP</td></tr>
+      <tr><td><code>FTP hôte</code></td><td>Transfert de fichiers</td></tr>
+      <tr><td><code>IPNCP PING 192.168.2.1 64 3</code></td><td>Ping : hôte, octets, nombre</td></tr>
+      <tr><td><code>IPNCP HOSTNM nom</code></td><td>Résoudre un nom (serveur DNS requis)</td></tr>
+      <tr><td><code>IPNCP NETEXIT</code></td><td>Arrêter la pile (IPACP)</td></tr>
+      <tr><td><code>@SYS$MANAGER:IP_STARTUP</code></td><td>Démarrer la pile</td></tr>
+    </table>
+    <table>
+      <tr><th>Fichier (<code>CMUIP_ROOT</code> = <code>SYS$COMMON</code>)</th><th>Rôle</th></tr>
+      <tr><td><code>CMUIP_ROOT:[SYSMGR]INTERNET.CONFIG</code></td><td>Adresse, masque, carte, passerelles, services</td></tr>
+      <tr><td><code>CMUIP_ROOT:[SYSMGR]NAMRES.CONFIG</code></td><td>Serveurs de noms (DNS), suffixes de domaine</td></tr>
+      <tr><td><code>CMUIP_ROOT:[SYSMGR]IP_STARTUP.COM</code></td><td>Démarrage; nom d'hôte (<code>INTERNET_HOST_NAME</code>)</td></tr>
+      <tr><td><code>CMUIP_ROOT:[SYSLIB]HOSTS.TXT</code></td><td>Table locale des noms (<code>INET$HOSTS</code>)</td></tr>
+      <tr><td><code>CMUIP_ROOT:[SYSMGR]INTERNET.LOG</code></td><td>Journal de la pile</td></tr>
+    </table>
+  </div>
+
+  <h3>Changer l'adresse, la passerelle, le DNS ou le nom</h3>
+  <p>Modifiez <code>CMUIP_ROOT:[SYSMGR]INTERNET.CONFIG</code> avec <code>EDIT/TPU CMUIP_ROOT:[SYSMGR]INTERNET.CONFIG</code> (<kbd>Ctrl+Z</kbd> enregistre). C'est ce fichier que lit IPACP. N'écrivez pas plutôt dans <code>SYS$MANAGER:</code> : un nouveau fichier y irait dans <code>SYS$SPECIFIC</code> et IPACP ne le verrait pas.</p>
+<pre>! Adresse et masque (carte XQA0) :
+Device_Init:XEDRV:XQA0:00-00-00-00-00-00:192.168.2.77:255.255.255.0
+
+! Passerelle par défaut (réseau 0.0.0.0, masque 0.0.0.0) : une ligne par passerelle
+Gateway:ROUTER:192.168.2.1:0.0.0.0:0.0.0.0</pre>
+  <p>Pour les serveurs de noms (DNS), modifiez <code>CMUIP_ROOT:[SYSMGR]NAMRES.CONFIG</code>. Le format vient des commentaires du fichier; je ne l'ai pas encore essayé avec un vrai serveur :</p>
+<pre>! Domain_Server:domaine:nom-du-serveur:adresse:port
+Domain_Server:.:ROUTER:192.168.2.1:53
+! Suffixe ajouté aux noms courts
+Domain_Suffix:maison.local</pre>
+  <p>Pour le nom d'hôte, changez la ligne <code>Define/System/Exec/NoLog INTERNET_HOST_NAME "VAXEMU.LOCAL"</code> de <code>CMUIP_ROOT:[SYSMGR]IP_STARTUP.COM</code>.</p>
+  <p><strong>Appliquer les changements sans redémarrer VMS</strong> (essayé dans l'émulateur) :</p>
+<pre>$ IPNCP NETEXIT                ! puis attendre le message « IPACP: Network offline » (≈ 10 s)
+$ @SYS$MANAGER:IP_STARTUP      ! « IPACP: Net device 0 is XQA0:, IP=... (Online) »
+$ IPNCP PING 192.168.2.1 64 3  ! vérifier</pre>
+  <p class="muted">Vous pouvez aussi redémarrer VMS (<code>@SYS$SYSTEM:SHUTDOWN</code>, redémarrage automatique YES). Pour tout reprendre, relancez <code>@SYS$UPDATE:VMSINSTAL CMUIP</code> depuis la trousse.</p>
+  <div class="note"><strong>Dans l'émulateur</strong>, voici les adresses selon le mode réseau :
+    <ul>
+      <li><strong>Réseau virtuel</strong> (menu Réseau) : VAX en 10.0.2.15, masque 255.255.255.0, passerelle 10.0.2.2.</li>
+      <li><strong>Pont local</strong> (relais vax-bridge, ou <code>term --bridge</code>) : une adresse libre de votre réseau, par exemple 192.168.2.77, avec votre routeur comme passerelle.</li>
+    </ul>
+    Le PC qui fait le pont joint le VAX par <code>telnet localhost 2323</code>.</div>
+
+  <h2>Dans l'émulateur</h2>
+  <ul>
+    <li>Disques du dépôt (OpenVMS 7.1 installé) : comptes SYSTEM, SYSTEST et FIELD, mot de passe <code>VAX_EMU_2026</code>.</li>
+    <li>Pour changer de disque, éteignez le VAX, sauf quand le bouton « Installer TCP/IP » change lui-même le CD.</li>
+    <li>Coller : bouton de la barre ou <kbd>Ctrl+Maj+V</kbd>. Copier : sélectionner le texte, puis le bouton Copier.</li>
+  </ul>
+</article>
+
+<article lang="en">
+  <header>
+    <div>
+      <h1>OpenVMS VAX cheat sheet</h1>
+      <p class="muted">Basic DCL commands, system directories and TCP/IP (CMU-OpenVMS/IP), for VE2CUY's VAX emulator.</p>
+    </div>
+    <p class="lang"><a href="?lang=fr">Français</a> · <a href="javascript:print()">Print</a></p>
+  </header>
+
+  <div class="note">DCL commands can be abbreviated (<code>DIR</code> for <code>DIRECTORY</code>) and are case-insensitive. <code>HELP</code> gives the help for each command, for example <code>HELP COPY</code>. To explain a message, use <code>HELP/MESSAGE</code>, for example <code>HELP/MESSAGE MEDOFL</code>.</div>
+
+  <h2>VAX console (<code>&gt;&gt;&gt;</code> prompt)</h2>
+  <div class="grid">
+    <table>
+      <tr><th>Command</th><th>Effect</th></tr>
+      <tr><td><code>B DUA0</code></td><td>Boot the system installed on DUA0</td></tr>
+      <tr><td><code>B DUA1</code></td><td>Boot an OpenVMS installation CD</td></tr>
+      <tr><td><code>SHOW DEVICE</code></td><td>Drives (DUA0-3) and Ethernet card (XQA0)</td></tr>
+      <tr><td><code>SHOW MEMORY</code> · <code>SHOW ETHERNET</code></td><td>Installed memory · station address</td></tr>
+      <tr><td><code>SET BOOT DUA0</code></td><td>Default boot device</td></tr>
+    </table>
+    <table>
+      <tr><th>Key / button</th><th>Effect</th></tr>
+      <tr><td><strong>Halt</strong> button or <kbd>Ctrl+P</kbd></td><td>Halt the processor, back to <code>&gt;&gt;&gt;</code> (BREAK)</td></tr>
+      <tr><td><code>C</code> (CONTINUE)</td><td>Resume where the processor halted</td></tr>
+      <tr><td><code>B/R5:1 DUA0</code></td><td>Conversational boot (<code>SYSBOOT&gt;</code> prompt)</td></tr>
+    </table>
+  </div>
+
+  <h2>Session and keyboard</h2>
+  <div class="grid">
+    <table>
+      <tr><th>Command</th><th>Effect</th></tr>
+      <tr><td><code>LOGOUT</code></td><td>End the session</td></tr>
+      <tr><td><code>SET PASSWORD</code></td><td>Change your password (A-Z, 0-9, $ and _ only)</td></tr>
+      <tr><td><code>SHOW TIME</code> · <code>SHOW USERS</code></td><td>Date and time · logged-in users</td></tr>
+      <tr><td><code>SET TERMINAL/DEVICE=VT100</code></td><td>Terminal type (full-screen editors)</td></tr>
+      <tr><td><code>RECALL/ALL</code></td><td>Previous commands (also: ↑ arrow)</td></tr>
+      <tr><td><code>SET PROCESS/PRIVILEGES=ALL</code></td><td>Enable all your privileges (SYSTEM)</td></tr>
+    </table>
+    <table>
+      <tr><th>Key</th><th>Effect</th></tr>
+      <tr><td><kbd>Ctrl+Y</kbd> · <kbd>Ctrl+C</kbd></td><td>Interrupt the current command</td></tr>
+      <tr><td><kbd>Ctrl+Z</kbd></td><td>End of input (CREATE; utilities: exit)</td></tr>
+      <tr><td><kbd>Ctrl+T</kbd></td><td>Process status (time, I/O)</td></tr>
+      <tr><td><kbd>Ctrl+U</kbd> · <kbd>Ctrl+R</kbd></td><td>Erase · redisplay the line</td></tr>
+      <tr><td><kbd>Ctrl+S</kbd> · <kbd>Ctrl+Q</kbd></td><td>Pause · resume output</td></tr>
+      <tr><td><kbd>Ctrl+O</kbd></td><td>Discard / restore output</td></tr>
+    </table>
+  </div>
+
+  <h2>Files and directories</h2>
+  <p>A file specification: <code>DUA0:[DIRECTORY.SUB]NAME.TYPE;version</code>. Each write creates a new version, and a bare <code>;</code> means the latest. Wildcards: <code>*</code> (several characters), <code>%</code> (one character), <code>[...]</code> (all subdirectories), <code>[-]</code> (parent directory).</p>
+  <div class="grid">
+    <table>
+      <tr><th>Command</th><th>Effect</th></tr>
+      <tr><td><code>DIRECTORY</code> · <code>DIR/SIZE/DATE</code> · <code>DIR/FULL</code></td><td>List files (size in 512-byte blocks)</td></tr>
+      <tr><td><code>DIR [...]*.COM</code></td><td>Search all subdirectories</td></tr>
+      <tr><td><code>TYPE NOTES.TXT</code> · <code>TYPE/PAGE</code></td><td>Display a file (page by page)</td></tr>
+      <tr><td><code>CREATE NOTES.TXT</code></td><td>Type a file, end with <kbd>Ctrl+Z</kbd></td></tr>
+      <tr><td><code>COPY A.TXT B.TXT</code> · <code>RENAME A.TXT C.TXT</code></td><td>Copy · rename (or move)</td></tr>
+      <tr><td><code>DELETE A.TXT;*</code></td><td>Delete: the version is required</td></tr>
+      <tr><td><code>PURGE</code> · <code>PURGE/KEEP=2</code></td><td>Keep only the latest (or 2 latest) version(s)</td></tr>
+      <tr><td><code>SEARCH *.COM IP_STARTUP</code></td><td>Search text in files</td></tr>
+      <tr><td><code>DIFFERENCES A.TXT B.TXT</code></td><td>Compare two files</td></tr>
+    </table>
+    <table>
+      <tr><th>Command</th><th>Effect</th></tr>
+      <tr><td><code>SHOW DEFAULT</code></td><td>Current directory</td></tr>
+      <tr><td><code>SET DEFAULT [.SUB]</code> · <code>[-]</code> · <code>SYS$LOGIN</code></td><td>Go down · up · home</td></tr>
+      <tr><td><code>CREATE/DIRECTORY [.WORK]</code></td><td>Create a directory</td></tr>
+      <tr><td><code>SET PROTECTION=(W:RE) A.TXT</code></td><td>Permissions (System, Owner, Group, World)</td></tr>
+      <tr><td><code>EDIT/TPU A.TXT</code></td><td>EVE editor (arrows); <kbd>Ctrl+Z</kbd>: save and exit</td></tr>
+      <tr><td><code>EDIT/EDT A.TXT</code></td><td>EDT editor (line mode: <code>EXIT</code>, <code>QUIT</code>)</td></tr>
+      <tr><td><code>DUMP/RECORDS A.DAT</code></td><td>Hexadecimal contents</td></tr>
+      <tr><td><code>SET FILE/ATTRIBUTES=(RFM:FIX,MRS:8192,LRL:8192) X.BCK</code></td><td>Make a save set copied from a CD usable</td></tr>
+    </table>
+  </div>
+
+  <h2>System, processes and disks</h2>
+  <div class="grid">
+    <table>
+      <tr><th>Command</th><th>Effect</th></tr>
+      <tr><td><code>SHOW SYSTEM</code></td><td>Running processes</td></tr>
+      <tr><td><code>SHOW PROCESS/ALL</code> · <code>SHOW QUOTA</code></td><td>Your process · your disk space</td></tr>
+      <tr><td><code>STOP/ID=00000210</code></td><td>Stop a process</td></tr>
+      <tr><td><code>MONITOR SYSTEM</code></td><td>Live activity (<kbd>Ctrl+Z</kbd> to exit)</td></tr>
+      <tr><td><code>SHOW MEMORY</code> · <code>SHOW ERROR</code></td><td>Memory · device errors</td></tr>
+      <tr><td><code>SHOW LICENSE</code></td><td>Loaded licenses (PAKs)</td></tr>
+      <tr><td><code>SHOW LOGICAL SYS$*</code> · <code>SHOW SYMBOL *</code></td><td>Logical names · symbols</td></tr>
+    </table>
+    <table>
+      <tr><th>Command</th><th>Effect</th></tr>
+      <tr><td><code>SHOW DEVICE D</code> · <code>SHOW DEVICE DUA0/FULL</code></td><td>Disks, free space</td></tr>
+      <tr><td><code>MOUNT DUA1: OPENVMS071</code></td><td>Mount a CD (volume label)</td></tr>
+      <tr><td><code>MOUNT/OVERRIDE=IDENTIFICATION DUA1:</code></td><td>Mount without knowing the label</td></tr>
+      <tr><td><code>MOUNT/MEDIA_FORMAT=CDROM DUA1: NAME</code></td><td>ISO 9660 CD (e.g. made with mkiso)</td></tr>
+      <tr><td><code>DISMOUNT DUA1:</code></td><td>Dismount (before ejecting it in the page)</td></tr>
+      <tr><td><code>INITIALIZE DUA2: DATA</code> then <code>MOUNT/SYSTEM DUA2: DATA</code></td><td>Prepare a blank disk (RA92 in DUA2)</td></tr>
+      <tr><td><code>BACKUP [WORK...]*.* DUA2:[SAVE]W.BCK/SAVE_SET</code></td><td>Back up to a save set</td></tr>
+    </table>
+  </div>
+
+  <h2>User accounts (SYSTEM)</h2>
+<pre>$ SET DEFAULT SYS$SYSTEM
+$ RUN AUTHORIZE
+UAF&gt; ADD ALAIN /PASSWORD=TEMPO_1234 /UIC=[200,200] /DEVICE=SYS$SYSDEVICE: /DIRECTORY=[ALAIN] /OWNER="Alain"
+UAF&gt; SHOW ALAIN            ! also: MODIFY, REMOVE, LIST
+UAF&gt; EXIT
+$ CREATE/DIRECTORY SYS$SYSDEVICE:[ALAIN] /OWNER_UIC=[200,200]</pre>
+  <p class="muted">Without license keys (PAKs), VMS allows logins on the console (OPA0). Telnet logins also work (CMU-OpenVMS/IP).</p>
+
+  <h2>Shutting down and rebooting</h2>
+<pre>$ @SYS$SYSTEM:SHUTDOWN       ! answer 0 minutes, then Return to the questions
+                             ! "automatic system reboot": YES to reboot
+SYSTEM SHUTDOWN COMPLETE      ! only then: Halt button (&gt;&gt;&gt;) or Power off</pre>
+  <p>Forgot the SYSTEM password: <code>B/R5:1 DUA0</code>, then <code>SYSBOOT&gt; SET WINDOW_SYSTEM 0</code>, <code>SET WRITESYSPARAMS 0</code>, <code>SET/STARTUP OPA0:</code> and <code>CONTINUE</code>. At the <code>$</code> prompt: <code>@SYS$SYSTEM:STARTUP</code>, then <code>SET DEFAULT SYS$SYSTEM</code>, <code>RUN AUTHORIZE</code> and <code>MODIFY SYSTEM/PASSWORD=NEW_PW</code>. Then reboot.</p>
+
+  <h2>Procedures, symbols and logical names</h2>
+  <div class="grid">
+    <table>
+      <tr><th>Command</th><th>Effect</th></tr>
+      <tr><td><code>@FILE.COM</code></td><td>Run a command procedure</td></tr>
+      <tr><td><code>DIR :== DIRECTORY/SIZE/DATE</code></td><td>Global symbol (abbreviation)</td></tr>
+      <tr><td><code>DEFINE WORK DUA2:[WORK]</code></td><td>Logical name (then <code>DIR WORK:</code>)</td></tr>
+      <tr><td><code>WRITE SYS$OUTPUT F$TIME()</code></td><td>Display a value (F$... lexical functions)</td></tr>
+      <tr><td><code>WRITE SYS$OUTPUT F$GETSYI("NODENAME")</code></td><td>Node name (VAXEMU)</td></tr>
+    </table>
+    <table>
+      <tr><th>File</th><th>Role</th></tr>
+      <tr><td><code>SYS$LOGIN:LOGIN.COM</code></td><td>Run at each login of the user</td></tr>
+      <tr><td><code>SYS$MANAGER:SYLOGIN.COM</code></td><td>Run at each login, for everyone</td></tr>
+      <tr><td><code>SYS$MANAGER:SYSTARTUP_VMS.COM</code></td><td>Site startup (e.g. <code>@SYS$MANAGER:IP_STARTUP</code>)</td></tr>
+      <tr><td><code>SUBMIT X.COM</code> · <code>SHOW QUEUE/ALL</code></td><td>Batch job · queues</td></tr>
+    </table>
+  </div>
+
+  <h2>Important directories</h2>
+  <p>The system disk (<code>SYS$SYSDEVICE</code>, here DUA0) holds the root <code>[SYS0]</code>. Each logical name below looks first in <code>SYS$SPECIFIC</code> (<code>[SYS0.SYSxxx]</code>, for this node), then in <code>SYS$COMMON</code> (<code>[SYS0.SYSCOMMON.SYSxxx]</code>, shared).</p>
+  <table>
+    <tr><th>Logical name</th><th>Contents</th></tr>
+    <tr><td><code>SYS$SYSTEM</code> ([SYSEXE])</td><td>System programs; <code>SYSUAF.DAT</code> (accounts), <code>MODPARAMS.DAT</code> (AUTOGEN parameters), <code>SHUTDOWN.COM</code>, <code>STARTUP.COM</code></td></tr>
+    <tr><td><code>SYS$MANAGER</code> ([SYSMGR])</td><td>Manager procedures: <code>SYSTARTUP_VMS.COM</code>, <code>SYLOGIN.COM</code>, <code>OPERATOR.LOG</code>; TCP/IP: <code>IP_STARTUP.COM</code>, <code>INTERNET.CONFIG</code>, <code>NAMRES.CONFIG</code></td></tr>
+    <tr><td><code>SYS$STARTUP</code> ([SYS$STARTUP])</td><td>Startup of the VMS components</td></tr>
+    <tr><td><code>SYS$LIBRARY</code> ([SYSLIB])</td><td>Shareable libraries, <code>DCLTABLES.EXE</code> (DCL verbs)</td></tr>
+    <tr><td><code>SYS$HELP</code> ([SYSHLP])</td><td>Help libraries (<code>HELPLIB.HLB</code>), release notes; CMU-IP: <code>[SYSHLP.DOC]</code></td></tr>
+    <tr><td><code>SYS$UPDATE</code> ([SYSUPD])</td><td><code>VMSINSTAL.COM</code> (install a product), <code>AUTOGEN.COM</code></td></tr>
+    <tr><td><code>SYS$ERRORLOG</code> ([SYSERR])</td><td>Hardware error log</td></tr>
+    <tr><td><code>SYS$LOGIN</code></td><td>User's home directory (SYSTEM: <code>[SYSMGR]</code>)</td></tr>
+    <tr><td><code>SYS$EXAMPLES</code></td><td>Example programs</td></tr>
+  </table>
+  <p>After changing <code>MODPARAMS.DAT</code>: <code>@SYS$UPDATE:AUTOGEN GETDATA REBOOT NOFEEDBACK</code>.</p>
+
+  <h2>TCP/IP (CMU-OpenVMS/IP)</h2>
+  <div class="grid">
+    <table>
+      <tr><th>Command</th><th>Effect</th></tr>
+      <tr><td><code>TELNET 10.0.2.2</code> · <code>TELNET host/PORT=80</code></td><td>Telnet session · test a TCP port</td></tr>
+      <tr><td><code>FTP host</code></td><td>File transfer</td></tr>
+      <tr><td><code>IPNCP PING 192.168.2.1 64 3</code></td><td>Ping: host, bytes, count</td></tr>
+      <tr><td><code>IPNCP HOSTNM name</code></td><td>Resolve a name (needs a DNS server)</td></tr>
+      <tr><td><code>IPNCP NETEXIT</code></td><td>Stop the stack (IPACP)</td></tr>
+      <tr><td><code>@SYS$MANAGER:IP_STARTUP</code></td><td>Start the stack</td></tr>
+    </table>
+    <table>
+      <tr><th>File (<code>CMUIP_ROOT</code> = <code>SYS$COMMON</code>)</th><th>Role</th></tr>
+      <tr><td><code>CMUIP_ROOT:[SYSMGR]INTERNET.CONFIG</code></td><td>Address, mask, card, gateways, services</td></tr>
+      <tr><td><code>CMUIP_ROOT:[SYSMGR]NAMRES.CONFIG</code></td><td>Name servers (DNS), domain suffixes</td></tr>
+      <tr><td><code>CMUIP_ROOT:[SYSMGR]IP_STARTUP.COM</code></td><td>Startup; host name (<code>INTERNET_HOST_NAME</code>)</td></tr>
+      <tr><td><code>CMUIP_ROOT:[SYSLIB]HOSTS.TXT</code></td><td>Local name table (<code>INET$HOSTS</code>)</td></tr>
+      <tr><td><code>CMUIP_ROOT:[SYSMGR]INTERNET.LOG</code></td><td>Stack log</td></tr>
+    </table>
+  </div>
+
+  <h3>Changing the address, gateway, DNS or name</h3>
+  <p>Edit <code>CMUIP_ROOT:[SYSMGR]INTERNET.CONFIG</code> with <code>EDIT/TPU CMUIP_ROOT:[SYSMGR]INTERNET.CONFIG</code> (<kbd>Ctrl+Z</kbd> saves). This is the file IPACP reads. Do not write to <code>SYS$MANAGER:</code> instead: a new file would go to <code>SYS$SPECIFIC</code>, which IPACP never sees.</p>
+<pre>! Address and mask (card XQA0):
+Device_Init:XEDRV:XQA0:00-00-00-00-00-00:192.168.2.77:255.255.255.0
+
+! Default gateway (network 0.0.0.0, mask 0.0.0.0): one line per gateway
+Gateway:ROUTER:192.168.2.1:0.0.0.0:0.0.0.0</pre>
+  <p>For name servers (DNS), edit <code>CMUIP_ROOT:[SYSMGR]NAMRES.CONFIG</code>. This format comes from the file's comments; I have not yet tried it with a real server:</p>
+<pre>! Domain_Server:domain:server-name:address:port
+Domain_Server:.:ROUTER:192.168.2.1:53
+! Suffix added to short names
+Domain_Suffix:home.local</pre>
+  <p>For the host name, change the line <code>Define/System/Exec/NoLog INTERNET_HOST_NAME "VAXEMU.LOCAL"</code> in <code>CMUIP_ROOT:[SYSMGR]IP_STARTUP.COM</code>.</p>
+  <p><strong>Apply the changes without rebooting VMS</strong> (tried in the emulator):</p>
+<pre>$ IPNCP NETEXIT                ! then wait for "IPACP: Network offline" (≈ 10 s)
+$ @SYS$MANAGER:IP_STARTUP      ! "IPACP: Net device 0 is XQA0:, IP=... (Online)"
+$ IPNCP PING 192.168.2.1 64 3  ! check</pre>
+  <p class="muted">You can also reboot VMS (<code>@SYS$SYSTEM:SHUTDOWN</code>, automatic reboot YES). To start over, run <code>@SYS$UPDATE:VMSINSTAL CMUIP</code> again from the kit.</p>
+  <div class="note"><strong>In the emulator</strong>, these are the addresses for each network mode:
+    <ul>
+      <li><strong>Virtual network</strong> (Network menu): VAX at 10.0.2.15, mask 255.255.255.0, gateway 10.0.2.2.</li>
+      <li><strong>Local bridge</strong> (vax-bridge relay, or <code>term --bridge</code>): a free address on your network, e.g. 192.168.2.77, with your router as the gateway.</li>
+    </ul>
+    The PC running the bridge reaches the VAX with <code>telnet localhost 2323</code>.</div>
+
+  <h2>In the emulator</h2>
+  <ul>
+    <li>Repository disks (OpenVMS 7.1 installed): accounts SYSTEM, SYSTEST and FIELD, password <code>VAX_EMU_2026</code>.</li>
+    <li>To change disks, power the VAX off, except when the Install TCP/IP button changes the CD itself.</li>
+    <li>Paste: toolbar button or <kbd>Ctrl+Shift+V</kbd>. Copy: select the text, then the Copy button.</li>
+  </ul>
+</article>
+
+</body>
+</html>

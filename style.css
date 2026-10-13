@@ -1149,3 +1149,6 @@ button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--error)
   border: 1px solid var(--accent, #2bb3c0); border-radius: 8px; font-size: 0.88rem; }
 .pilot[hidden] { display: none; }
 .pilot span { flex: 1; }
+.pilot.locked { border-color: var(--error, #d9534f); }
+
+a.icon-button { display: inline-flex; align-items: center; justify-content: center; color: inherit; }

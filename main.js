@@ -6,7 +6,7 @@
 
 import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -75,6 +75,13 @@ langList.addEventListener('change', () => {
   savePrefs();
   for (const listener of languageListeners) listener();
 });
+
+// Aide-mémoire OpenVMS (barre du haut) : dans la langue de l'interface (français ou anglais).
+function cheatsheetLink() {
+  document.getElementById('cheatsheet').href = `cheatsheet.html?lang=${langList.value === 'fr' ? 'fr' : 'en'}`;
+}
+languageListeners.push(cheatsheetLink);
+cheatsheetLink();
 
 function showVersion() {
   document.getElementById('about-version').textContent = t('about.version', { v: VERSION });
@@ -290,6 +297,12 @@ fontSize.addEventListener('change', () => {
 
 term.onData((data) => {
   if (!running) return;
+  // Pendant une automatisation, le clavier est à elle : une touche de l'usager se
+  // mêlerait à ses commandes et à ses réponses.
+  if (pilot) {
+    pilot.keyboardLocked();
+    return;
+  }
   // Retour arrière de xterm (DEL) : c'est aussi la touche d'effacement du VT.
   sendBytes(stringToBytes(data));
 });
@@ -301,7 +314,8 @@ function sendBytes(bytes) {
 document.getElementById('paste-button').addEventListener('click', async () => {
   try {
     const text = await navigator.clipboard.readText();
-    if (text && running) sendBytes(stringToBytes(text.replace(/\r?\n/g, '\r')));
+    if (pilot) pilot.keyboardLocked();
+    else if (text && running) sendBytes(stringToBytes(text.replace(/\r?\n/g, '\r')));
   } catch { /* presse-papiers refusé */ }
   term.focus();
 });
@@ -462,6 +476,10 @@ function onWorkerMessage(e) {
       break;
     case 'net':
       showNet(msg.state);
+      break;
+    case 'swapped':
+      swapDone?.();
+      swapDone = null;
       break;
     default:
       break;
@@ -866,8 +884,8 @@ async function fetchRepo(kind, entry) {
 }
 
 /** Copie un fichier du dépôt dans l'OPFS et le branche sur `unit` (VAX éteint). */
-async function importFromRepo(kind, entry, unit) {
-  if (running || diskBusy) {
+async function importFromRepo(kind, entry, unit, hot = false) {
+  if ((running && !hot) || diskBusy) {
     showStatus('disk.locked');
     return false;
   }
@@ -879,6 +897,29 @@ async function importFromRepo(kind, entry, unit) {
     showStatus('error', { msg: e.message ?? String(e) });
     return false;
   }
+}
+
+/** Machine en marche : le fil ferme (ou rouvre) l'image du lecteur `unit`. */
+let swapDone = null;
+function swapUnit(unit, d) {
+  return new Promise((resolve) => {
+    swapDone = resolve;
+    worker?.postMessage({ type: 'swap', unit, drive: d?.drive ?? null, file: d?.file ?? null });
+    setTimeout(resolve, 10000);
+  });
+}
+
+/**
+ * Machine en marche : change à chaud le fichier du lecteur `unit` (un CD que VMS n'a pas
+ * monté) sans éteindre le VAX.
+ */
+async function hotRepoFile(kind, entry, unit) {
+  const d = prefs.disks[unit];
+  if (d?.file && d.name === repoName(entry) && (!entry.size || d.size === entry.size)) return true;
+  await swapUnit(unit, null);
+  const ok = await importFromRepo(kind, entry, unit, true);
+  if (prefs.disks[unit]?.file) await swapUnit(unit, prefs.disks[unit]);
+  return ok;
 }
 
 /** Comme importFromRepo, sauf si le lecteur a déjà ce fichier (même nom, même taille). */
@@ -1062,7 +1103,15 @@ class Pilot {
     const secs = Math.floor((Date.now() - this.stepTime) / 1000);
     const time = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
     const text = t('auto.running', { name: t(this.nameKey), step: this.stepKey ? t(this.stepKey) : '' });
-    pilotText.textContent = `${text} ${time}${this.progress ? ` — ${this.progress}` : ''}`;
+    const locked = Date.now() < (this.lockedUntil ?? 0) ? ` — ${t('auto.keyboard')}` : '';
+    pilotText.textContent = `${text} ${time}${this.progress ? ` — ${this.progress}` : ''}${locked}`;
+    pilotBar.classList.toggle('locked', !!locked);
+  }
+
+  /** L'usager a tapé pendant l'automatisation : rappel dans la barre (quelques secondes). */
+  keyboardLocked() {
+    this.lockedUntil = Date.now() + 4000;
+    this.show();
   }
 
   step(key) {
@@ -1267,33 +1316,76 @@ async function installTcpip() {
     showStatus('auto.tcp.noSystem');
     return;
   }
-  const password = prompt(t('auto.tcp.password'));
-  if (!password) return;
+  // Machine en marche : on ne l'éteint jamais (OpenVMS n'aurait pas été arrêté). On
+  // reprend là où en est la console, et le CD change à chaud.
+  if (running && !confirm(t('auto.tcp.running'))) return;
+  if (!running && !confirm(t('auto.tcp.confirm'))) return;
+  let password = null;
+  const askPassword = () => {
+    password ??= prompt(t('auto.tcp.password'));
+    if (!password) throw new Error(t('auto.cancelled'));
+    return password;
+  };
   const P = startPilot('auto.tcp');
   const cmd = async (line, seconds = 600) => {
     P.send(`${line}\r`);
     await P.wait('$ ', seconds);
   };
-  try {
-    await powerOff();
-    P.step('auto.step.cd');
-    const cd = await repoEntry('iso', 'cmuip-6.6-5k');
-    if (!(await ensureRepoFile('iso', cd, 1))) throw new Error(t('auto.fail.download', { name: cd.file }));
+  const login = async () => {
+    const pw = askPassword();
+    P.step('auto.step.login');
+    P.send('SYSTEM\r');
+    await P.wait('Password:', 120);
+    P.send(`${pw}\r`);
+    if ((await P.wait(['$ ', 'User authorization failure'], 300)) === 1) throw new Error(t('auto.tcp.badPassword'));
+  };
+  const boot = async () => {
     P.step('auto.step.bootVms');
-    await powerOn();
-    await P.wait('>>>', 180);
     P.send('B DUA0\r');
     await P.wait('Accounting information:', 3600);
     await P.sleep(5);
-    P.step('auto.step.login');
     P.send('\r');
     await P.wait('Username:', 300);
-    P.send('SYSTEM\r');
-    await P.wait('Password:', 120);
-    P.send(`${password}\r`);
-    if ((await P.wait(['$ ', 'User authorization failure'], 300)) === 1) throw new Error(t('auto.tcp.badPassword'));
+    await login();
+  };
+  try {
+    const cd = await repoEntry('iso', 'cmuip-6.6-5k');
+    if (!running) {
+      P.step('auto.step.cd');
+      if (!(await ensureRepoFile('iso', cd, 1))) throw new Error(t('auto.fail.download', { name: cd.file }));
+      await powerOn();
+      await P.wait('>>>', 180);
+      await boot();
+    } else {
+      // Où en est la console : >>> (VAX arrêté), Username: ou $.
+      P.step('auto.step.state');
+      P.send('\r');
+      const state = await P.wait(['>>>', 'Username:', '$ '], 30).catch(() => {
+        throw new Error(t('auto.tcp.busy'));
+      });
+      if (state === 0) await boot();
+      else if (state === 1) await login();
+      else {
+        // Déjà à l'invite $ : seulement si c'est SYSTEM (privilèges de VMSINSTAL).
+        P.send('WRITE SYS$OUTPUT "QQ"+F$GETJPI("","USERNAME")\r');
+        if ((await P.wait(['QQSYSTEM', '$ '], 60)) !== 0) throw new Error(t('auto.tcp.notSystem'));
+        await P.wait('$ ', 60);
+      }
+      P.step('auto.step.cd');
+      await cmd('DISMOUNT DUA1:');
+      if (!(await hotRepoFile('iso', cd, 1))) throw new Error(t('auto.fail.download', { name: cd.file }));
+      await P.sleep(3);
+    }
     P.step('auto.step.copy');
-    await cmd('MOUNT/MEDIA_FORMAT=CDROM/NOWRITE DUA1: CMUIP066');
+    // Après un changement à chaud, le lecteur peut demander un instant : nouvel essai.
+    for (let attempt = 0; ; attempt++) {
+      P.send('MOUNT/MEDIA_FORMAT=CDROM/NOWRITE DUA1: CMUIP066\r');
+      const r = await P.wait(['%MOUNT-I-CDROM_ISO', '%MOUNT-F-', '%MOUNT-E-'], 300);
+      await P.wait('$ ', 120);
+      if (r === 0) break;
+      if (attempt >= 3) throw new Error(t('auto.tcp.mount'));
+      await P.sleep(5);
+    }
     await cmd('CREATE/DIRECTORY SYS$SYSDEVICE:[CMUIP066]');
     await cmd('SET DEFAULT SYS$SYSDEVICE:[CMUIP066]');
     await cmd('COPY DUA1:[000000]*.* []', 1800);

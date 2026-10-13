@@ -2,7 +2,11 @@
 // l'interface reste fluide. Le temps simulé suit le temps réel; si l'hôte ne suit pas, le
 // retard est abandonné au-delà de 200 ms (le VAX ralentit, sans rattrapage brutal).
 //
-// Messages reçus : start {rom, nvr, mem, server, disks, bridge}, input {bytes}, break, stop.
+// Messages reçus : start {rom, nvr, mem, server, disks, bridge}, input {bytes}, break, stop,
+// speed {factor} (vitesse du processeur : ×1 = 10 MIPS; pas encore offerte dans la page :
+// le fureteur plafonne vers 16 MIPS et la boucle d'attente de VMS n'est pas reconnue),
+// swap {unit, drive, file} (change l'image d'un lecteur machine en marche; file nul : retire;
+// répond swapped {unit}).
 // Messages envoyés : ready, output {bytes}, stats {mips, simMs, io [[lus, écrits] × 4]},
 // nvr {bytes}, stopped {reason},
 // closed (images fermées après stop), error {msg}, net {state, url} (relais vax-bridge).
@@ -26,19 +30,19 @@ let statInst = 0;
 let statTime = 0;
 let nvrTime = 0;
 let lastNvr = null;
-let handles = [];   // accès synchrones OPFS ouverts (fermés à l'arrêt)
+let handles = new Map();   // lecteur -> accès synchrone OPFS ouvert (fermés à l'arrêt)
 let bridgeUrl = null;
 let socket = null;
 let socketTimer = 0;
 let flushTime = 0;
 
 /** Ouvre une image de l'OPFS et la présente à la machine (JsDisk). */
-async function openDisk(file) {
+async function openDisk(file, unit) {
   const root = await navigator.storage.getDirectory();
   const dir = await root.getDirectoryHandle('disks', { create: true });
   const fh = await dir.getFileHandle(file, { create: true });
   const h = await fh.createSyncAccessHandle();
-  handles.push(h);
+  handles.set(unit, h);
   return {
     read(off, buf) {
       try {
@@ -107,14 +111,16 @@ function sendFrames() {
   }
 }
 
+function closeHandle(h) {
+  try {
+    h.flush();
+    h.close();
+  } catch { /* déjà fermé */ }
+}
+
 function closeDisks() {
-  for (const h of handles) {
-    try {
-      h.flush();
-      h.close();
-    } catch { /* déjà fermé */ }
-  }
-  handles = [];
+  for (const h of handles.values()) closeHandle(h);
+  handles.clear();
 }
 
 const SLICE_MS = 12; // temps de calcul au plus, par tour
@@ -197,12 +203,13 @@ self.onmessage = async (e) => {
         if (emu) emu.free();
         closeDisks();
         emu = new Emulator(msg.mem);
-        for (const d of msg.disks ?? []) emu.attach_disk(d.unit, d.drive, await openDisk(d.file));
+        for (const d of msg.disks ?? []) emu.attach_disk(d.unit, d.drive, await openDisk(d.file, d.unit));
         emu.load_rom(msg.rom, msg.server);
         if (msg.nvr) emu.load_nvr(msg.nvr);
         lastNvr = msg.nvr ? msg.nvr.slice() : null;
         const [secs, centis] = yearSeconds();
         emu.set_time(secs, centis);
+        emu.set_speed(msg.speed ?? 1);
         bridgeUrl = msg.bridge ?? null;
         if (bridgeUrl) emu.use_bridge();
         emu.power_up();
@@ -221,6 +228,20 @@ self.onmessage = async (e) => {
       case 'input':
         emu?.type_bytes(msg.bytes);
         break;
+      case 'speed':
+        emu?.set_speed(msg.factor);
+        break;
+      case 'swap': {
+        if (emu) {
+          emu.detach_disk(msg.unit);
+          const old = handles.get(msg.unit);
+          if (old) closeHandle(old);
+          handles.delete(msg.unit);
+          if (msg.file) emu.attach_disk(msg.unit, msg.drive, await openDisk(msg.file, msg.unit));
+        }
+        post({ type: 'swapped', unit: msg.unit });
+        break;
+      }
       case 'break':
         emu?.send_break();
         break;
