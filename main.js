@@ -6,7 +6,7 @@
 
 import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js';
 
-const VERSION = '0.3.0';
+const VERSION = '0.3.1';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -20,6 +20,7 @@ const romInfo = document.getElementById('rom-info');
 const memList = document.getElementById('mem-list');
 const modelList = document.getElementById('model-list');
 const fontSize = document.getElementById('font-size');
+const fontFamily = document.getElementById('font-family');
 const powerButton = document.getElementById('power');
 const powerLabel = document.getElementById('power-label');
 const haltButton = document.getElementById('halt');
@@ -36,6 +37,7 @@ const prefs = {
   mem: 64,           // mémoire (Mo)
   model: 'microvax', // 'microvax' ou 'server'
   fontSize: 16,
+  fontFamily: '',    // police du terminal ('' : celle par défaut)
   power: true,       // allumer au chargement de la page (si un ROM est gardé)
   // Lecteurs MSCP DUA0-DUA3 : { drive, file (nom dans l'OPFS), name (nom d'origine), size }.
   disks: [null, null, null, null],
@@ -257,10 +259,47 @@ async function dbPut(key, value) {
 
 // ------------------------------------------------------------------ terminal
 
+const DEFAULT_FONT = '"DejaVu Sans Mono", "Cascadia Mono", Consolas, "Courier New", monospace';
+// Polices à chasse fixe offertes dans la section Affichage : seulement celles que cet
+// ordinateur possède (la page n'en télécharge aucune).
+const MONO_FONTS = [
+  'Cascadia Mono', 'Cascadia Code', 'Consolas', 'Courier New', 'Lucida Console', 'Lucida Sans Typewriter',
+  'SF Mono', 'Menlo', 'Monaco', 'Andale Mono', 'DejaVu Sans Mono', 'Liberation Mono', 'Ubuntu Mono',
+  'Noto Sans Mono', 'Droid Sans Mono', 'Roboto Mono', 'Source Code Pro', 'Fira Code', 'Fira Mono',
+  'JetBrains Mono', 'IBM Plex Mono', 'Hack', 'Inconsolata', 'Terminus', 'OCR A Extended',
+];
+
+/** Les polices de MONO_FONTS installées : leur texte ne mesure pas comme celui des polices de repli. */
+function installedFonts() {
+  const ctx = document.createElement('canvas').getContext('2d');
+  if (!ctx) return [];
+  const sample = 'mmmmmmmmmmlliiWW@#0123456789';
+  const width = (family) => { ctx.font = `72px ${family}`; return ctx.measureText(sample).width; };
+  const fallbacks = ['monospace', 'serif', 'sans-serif'];
+  const base = fallbacks.map(width);
+  return MONO_FONTS.filter((name) => fallbacks.some((f, i) => width(`"${name}", ${f}`) !== base[i]));
+}
+
+/** Famille CSS de la police choisie (suivie de celles par défaut, pour les caractères absents). */
+function fontStack(name) {
+  return name ? `"${name}", ${DEFAULT_FONT}` : DEFAULT_FONT;
+}
+
+for (const name of installedFonts()) {
+  const option = document.createElement('option');
+  option.value = name;
+  option.textContent = name;
+  option.style.fontFamily = `"${name}", monospace`;
+  fontFamily.append(option);
+}
+// Police choisie sur un autre ordinateur, absente ici : celle par défaut.
+if (![...fontFamily.options].some((o) => o.value === prefs.fontFamily)) prefs.fontFamily = '';
+fontFamily.value = prefs.fontFamily;
+
 const term = new window.Terminal({
   cols: 80,
   rows: 24,
-  fontFamily: '"DejaVu Sans Mono", "Cascadia Mono", Consolas, "Courier New", monospace',
+  fontFamily: fontStack(prefs.fontFamily),
   fontSize: prefs.fontSize,
   cursorBlink: true,
   scrollback: 5000,
@@ -293,6 +332,12 @@ fontSize.value = String(prefs.fontSize);
 fontSize.addEventListener('change', () => {
   prefs.fontSize = Number(fontSize.value);
   term.options.fontSize = prefs.fontSize;
+  savePrefs();
+});
+fontFamily.addEventListener('change', () => {
+  prefs.fontFamily = fontFamily.value;
+  term.options.fontFamily = fontStack(prefs.fontFamily);
+  if (telnetTerm) telnetTerm.options.fontFamily = term.options.fontFamily;
   savePrefs();
 });
 

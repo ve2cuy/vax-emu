@@ -1112,9 +1112,17 @@ button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--error)
   padding: 10px 12px;
   border-radius: 6px;
   background: #000;
+  /* Fenêtre étroite : le cadre défile de côté. Jamais de haut en bas : c'est la barre de
+     xterm (son historique) qui sert, et une deuxième barre la doublerait. */
   overflow-x: auto;
+  overflow-y: hidden;
 }
-.terminal .xterm { outline: none; }
+/* La barre de défilement de xterm se pose sur le bord droit du terminal : on lui réserve
+   une marge, sinon elle couvre les dernières colonnes du texte. */
+/* Largeur du contenu : en fenêtre étroite, la barre reste à droite de la 80e colonne (et
+   le cadre défile de côté) au lieu de se poser au milieu du texte. */
+.terminal .xterm { outline: none; width: max-content; padding-right: 16px; }
+.terminal .xterm .xterm-viewport { scrollbar-width: thin; scrollbar-color: #666 #000; }
 .terminal .xterm:focus-within { box-shadow: 0 0 0 2px var(--accent); border-radius: 4px; }
 .stage > .status { width: auto; max-width: 100%; }
 .overlay[hidden] { display: none; }

@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=89856d2f">
-  <link rel="stylesheet" href="style.css?v=89856d2f">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=0e3c0a3d">
+  <link rel="stylesheet" href="style.css?v=0e3c0a3d">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -228,6 +228,11 @@
                 <option value="18">18</option><option value="20">20</option><option value="22">22</option>
               </select>
             </label>
+            <label class="field"><span data-i18n="display.family">Font</span>
+              <select id="font-family">
+                <option value="" data-i18n="display.family.default">Default</option>
+              </select>
+            </label>
             <fieldset class="field segmented">
               <legend data-i18n="display.theme">Theme</legend>
               <label><input type="radio" name="theme" value="system" checked><span data-i18n="theme.system">System</span></label>
@@ -357,7 +362,7 @@
       </div>
     </main>
   </div>
-  <script src="vendor/xterm/xterm.js?v=89856d2f"></script>
-  <script type="module" src="main.js?v=89856d2f"></script>
+  <script src="vendor/xterm/xterm.js?v=0e3c0a3d"></script>
+  <script type="module" src="main.js?v=0e3c0a3d"></script>
 </body>
 </html>
