@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=0288db24">
-  <link rel="stylesheet" href="style.css?v=0288db24">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=16ade0e4">
+  <link rel="stylesheet" href="style.css?v=16ade0e4">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -414,7 +414,7 @@
           <button id="files-props" type="button" class="secondary with-icon" title="Properties" data-i18n-title="fs.props.tip"><svg class="icon"><use href="#i-info"/></svg><span data-i18n="fs.props">Properties</span></button>
       </div>
       <div class="files-filter">
-        <input id="files-filter" type="search" placeholder="Filter" aria-label="Filter by name" data-i18n-aria="fs.filter" autocomplete="off" spellcheck="false">
+        <input id="files-filter" type="search" placeholder="Filter" aria-label="Filter by name" data-i18n-aria="fs.filter" autocomplete="off" autocapitalize="off" spellcheck="false">
         <label class="check"><input id="files-versions" type="checkbox"> <span data-i18n="fs.allVersions">All versions</span></label>
         <span id="files-count" class="hint"></span>
         <input id="files-input" type="file" multiple hidden>
@@ -434,6 +434,17 @@
     <div id="files-editor" hidden>
       <div class="files-path"><code id="files-editor-name"></code></div>
       <p id="files-editor-info" class="hint"></p>
+      <div class="files-find">
+        <input id="files-find" type="search" placeholder="Find in the file" aria-label="Find in the file" data-i18n-aria="fs.find"
+               autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button id="files-find-prev" type="button" class="secondary small-button" title="Previous" data-i18n-title="fs.find.prev" aria-label="Previous" data-i18n-aria="fs.find.prev">
+          <svg class="icon"><use href="#i-up"/></svg></button>
+        <button id="files-find-next" type="button" class="secondary small-button" title="Next" data-i18n-title="fs.find.next" aria-label="Next" data-i18n-aria="fs.find.next">
+          <svg class="icon icon-down"><use href="#i-up"/></svg></button>
+        <span id="files-find-count" class="hint" role="status"></span>
+        <span class="spacer"></span>
+        <span id="files-pos" class="hint"></span>
+      </div>
       <textarea id="files-text" class="files-text" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"
                 aria-label="File content" data-i18n-aria="fs.editor.aria"></textarea>
       <div class="dialog-actions">
@@ -450,7 +461,7 @@
     <form method="dialog">
       <h2 id="files-ask-title"></h2>
       <p id="files-ask-hint" class="hint"></p>
-      <input id="files-ask-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <input id="files-ask-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
       <div class="dialog-actions">
         <span class="spacer"></span>
         <button type="button" class="secondary files-cancel" data-i18n="fs.cancel">Cancel</button>
@@ -465,7 +476,7 @@
       <p class="hint" data-i18n="fs.vms.login.hint"></p>
       <p id="files-login-error" class="warning" role="alert" hidden></p>
       <label class="field"><span data-i18n="fs.vms.user">Username</span>
-        <input id="files-login-user" type="text" value="SYSTEM" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+        <input id="files-login-user" type="text" value="SYSTEM" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
       <label class="field"><span data-i18n="fs.vms.password">Password</span>
         <input id="files-login-password" type="password" autocomplete="off"></label>
       <div class="dialog-actions">
@@ -514,7 +525,7 @@
       </div>
     </form>
   </dialog>
-  <script src="vendor/xterm/xterm.js?v=0288db24"></script>
-  <script type="module" src="main.js?v=0288db24"></script>
+  <script src="vendor/xterm/xterm.js?v=16ade0e4"></script>
+  <script type="module" src="main.js?v=16ade0e4"></script>
 </body>
 </html>

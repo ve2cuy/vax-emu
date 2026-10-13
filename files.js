@@ -5,8 +5,8 @@
 // réécrirait par-dessus nos modifications). VAX en marche, on peut aussi passer par OpenVMS
 // lui-même : une session telnet cachée exécute les opérations (vms-files.js).
 
-import { t } from './i18n.js?v=0288db24';
-import { VmsSession, vmsRun, childDir } from './vms-files.js?v=0288db24';
+import { t } from './i18n.js?v=16ade0e4';
+import { VmsSession, vmsRun, childDir } from './vms-files.js?v=16ade0e4';
 
 let ctx = null;          // { disks(), running(), worker(), version }
 let fsWorker = null;
@@ -169,6 +169,7 @@ function render() {
     ? t('fs.space', { free: state.info.free.toLocaleString(), blocks: state.info.blocks.toLocaleString(), mb: Math.round(state.info.free / 2048) })
     : '';
   $('files-filter').placeholder = t('fs.filter');
+  $('files-find').placeholder = t('fs.find');
   const vms = viaVms();
   $('files-notice').hidden = !ro && !vms;
   $('files-notice').classList.toggle('vms', vms);
@@ -387,7 +388,84 @@ async function openEntry(e) {
     area.focus();
     area.setSelectionRange(0, 0);
     area.scrollTop = 0;
+    resetFind();
   });
+}
+
+// ------------------------------------------------------------------ éditeur : position, recherche
+
+const find = { hits: [], at: -1 };
+
+/** Ligne et colonne du curseur (ou du début de la sélection) dans l'éditeur. */
+function showPosition() {
+  const area = $('files-text');
+  const before = area.value.slice(0, area.selectionStart);
+  const line = before.split('\n').length;
+  const col = before.length - before.lastIndexOf('\n');
+  const lines = area.value.split('\n').length - (area.value.endsWith('\n') ? 1 : 0);
+  $('files-pos').textContent = t('fs.pos', { line, lines: Math.max(lines, 1), col });
+}
+
+/** Amène la position `index` du texte au milieu de la zone visible. */
+function revealAt(index) {
+  const area = $('files-text');
+  const style = getComputedStyle(area);
+  const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.35;
+  const line = area.value.slice(0, index).split('\n').length - 1;
+  area.scrollTop = Math.max(0, line * lineHeight - area.clientHeight / 2);
+  const col = index - (area.value.lastIndexOf('\n', index - 1) + 1);
+  const charWidth = parseFloat(style.fontSize) * 0.6;
+  area.scrollLeft = Math.max(0, col * charWidth - area.clientWidth / 2);
+}
+
+/** Cherche (sans tenir compte de la casse) et va à l'occurrence suivante ou précédente. */
+function findInFile(step) {
+  const area = $('files-text');
+  const needle = $('files-find').value.toLowerCase();
+  const count = $('files-find-count');
+  find.hits = [];
+  if (!needle) {
+    find.at = -1;
+    count.textContent = '';
+    return;
+  }
+  const hay = area.value.toLowerCase();
+  for (let i = hay.indexOf(needle); i >= 0; i = hay.indexOf(needle, i + needle.length)) find.hits.push(i);
+  if (!find.hits.length) {
+    find.at = -1;
+    count.textContent = t('fs.find.none');
+    return;
+  }
+  if (step === 0) {
+    // Nouvelle saisie : la première occurrence à partir du curseur.
+    const from = area.selectionStart;
+    const next = find.hits.findIndex((i) => i >= from);
+    find.at = next < 0 ? 0 : next;
+  } else {
+    // Par rapport à la sélection courante (l'usager a pu déplacer le curseur).
+    const n = find.hits.length;
+    const cur = find.hits.indexOf(area.selectionStart);
+    let idx;
+    if (cur >= 0) idx = cur + step;
+    else {
+      const after = find.hits.findIndex((i) => i >= area.selectionStart);
+      idx = step > 0 ? (after < 0 ? 0 : after) : (after < 0 ? n - 1 : after - 1);
+    }
+    find.at = ((idx % n) + n) % n;
+  }
+  const start = find.hits[find.at];
+  area.setSelectionRange(start, start + needle.length);
+  revealAt(start);
+  count.textContent = t('fs.find.count', { n: find.at + 1, total: find.hits.length });
+  showPosition();
+}
+
+function resetFind() {
+  $('files-find').value = '';
+  $('files-find-count').textContent = '';
+  find.hits = [];
+  find.at = -1;
+  showPosition();
 }
 
 function hexDump(bytes) {
@@ -811,6 +889,7 @@ export function initFiles(context) {
     $('files-editor-export').hidden = false;
     showPane('editor');
     area.focus();
+    resetFind();
   });
   $('files-import').addEventListener('click', () => $('files-input').click());
   $('files-input').addEventListener('change', () => {
@@ -839,6 +918,32 @@ export function initFiles(context) {
     dlg.showModal();
   });
   $('files-save').addEventListener('click', saveEditor);
+  // Éditeur : position du curseur, recherche (Entrée : suivant; Maj+Entrée : précédent;
+  // Ctrl+F dans le texte : aller au champ de recherche).
+  const area = $('files-text');
+  for (const type of ['keyup', 'click', 'input', 'select']) area.addEventListener(type, showPosition);
+  area.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+      e.preventDefault();
+      const picked = area.value.slice(area.selectionStart, area.selectionEnd);
+      if (picked && !picked.includes('\n')) $('files-find').value = picked;
+      $('files-find').focus();
+      $('files-find').select();
+    }
+  });
+  $('files-find').addEventListener('input', () => findInFile(0));
+  $('files-find').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      findInFile(e.shiftKey ? -1 : 1);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      area.focus();
+    }
+  });
+  $('files-find-next').addEventListener('click', () => findInFile(1));
+  $('files-find-prev').addEventListener('click', () => findInFile(-1));
   $('files-editor-export').addEventListener('click', () => {
     const name = state.editing?.name ?? 'NOUVEAU.TXT';
     download(name, [$('files-text').value], 'text/plain');
