@@ -6,6 +6,8 @@
 // turbo {on} (quand le VAX travaille — calcul, disques, console —, le temps simulé va aussi
 // vite que le fureteur le permet; quand il attend sans rien faire, retour au temps réel), speed {factor} (vitesse du processeur : ×1 = 10 MIPS; pas encore offerte dans la page :
 // le fureteur plafonne vers 16 MIPS et la boucle d'attente de VMS n'est pas reconnue),
+// tcpOpen {port} (connexion telnet de la page vers le VAX; répond tcpState {state, ip} puis
+// tcp {bytes} à chaque arrivée), tcpSend {bytes}, tcpClose,
 // flush (écrit tout de suite les images et la NVR : onglet quitté), swap {unit, drive, file} (change l'image d'un lecteur machine en marche; file nul : retire;
 // répond swapped {unit}).
 // Messages envoyés : ready, output {bytes}, stats {mips, simMs, io [[lus, écrits] × 4]},
@@ -35,6 +37,8 @@ let lastNvr = null;
 let handles = new Map();   // lecteur -> accès synchrone OPFS ouvert (fermés à l'arrêt)
 let bridgeUrl = null;
 let turbo = false;
+let tcpId = 0;           // connexion telnet de la page (0 : aucune)
+let tcpState = -1;
 let burst = false;       // Turbo : en rafale (temps simulé détaché du temps réel)
 let lastActivity = 0;    // dernière activité du VAX (temps réel)
 let lastIo = 0;
@@ -109,6 +113,21 @@ function closeBridge() {
   const ws = socket;
   socket = null;
   try { ws?.close(); } catch { /* déjà fermé */ }
+}
+
+/** Connexion telnet de la page : données arrivées et changements d'état. */
+function pollTcp() {
+  const data = emu.net_recv(tcpId);
+  if (data.length) post({ type: 'tcp', bytes: data }, [data.buffer]);
+  const state = emu.net_state(tcpId);
+  if (state !== tcpState) {
+    tcpState = state;
+    post({ type: 'tcpState', state: ['connecting', 'open', 'closed'][state], ip: emu.net_guest_ip() });
+    if (state === 2) {
+      emu.net_close(tcpId);
+      tcpId = 0;
+    }
+  }
 }
 
 /** Trames émises par le VAX : au relais (perdues s'il est débranché). */
@@ -215,6 +234,7 @@ function tick() {
     sim = next;
   }
   if (emu) sendFrames();
+  if (tcpId) pollTcp();
   const out = emu.take_output();
   if (out.length) post({ type: 'output', bytes: out }, [out.buffer]);
 
@@ -264,6 +284,7 @@ self.onmessage = async (e) => {
         if (emu) emu.free();
         closeDisks();
         emu = new Emulator(msg.mem);
+        tcpId = 0;
         for (const d of msg.disks ?? []) {
           try {
             emu.attach_disk(d.unit, d.drive, await openDisk(d.file, d.unit));
@@ -308,6 +329,24 @@ self.onmessage = async (e) => {
         break;
       case 'speed':
         emu?.set_speed(msg.factor);
+        break;
+      case 'tcpOpen':
+        if (emu) {
+          if (tcpId) emu.net_close(tcpId);
+          tcpId = emu.net_connect(msg.port);
+          tcpState = -1;
+        }
+        break;
+      case 'tcpSend':
+        if (emu && tcpId) emu.net_send(tcpId, msg.bytes);
+        break;
+      case 'tcpClose':
+        if (emu && tcpId) {
+          emu.net_close(tcpId);
+          tcpId = 0;
+          tcpState = 2;
+          post({ type: 'tcpState', state: 'closed', ip: emu.net_guest_ip() });
+        }
         break;
       case 'flush':
         if (emu) {

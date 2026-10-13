@@ -18,8 +18,8 @@ WebAssembly. It installs and runs **OpenVMS VAX**, as on a VAX 4000 model 200.
   **OpenVMS VAX V7.1 installs from its CD**, boots and accepts logins.
 - **Network**: DELQA Ethernet controller (XQA0) on a private virtual network.
   **CMU-OpenVMS/IP** (TCP/IP) installs and runs.
-- **Coming next**: a telnet terminal into the VAX in the page, the VAX 4000-200 identity
-  (KA660).
+- **Telnet**: a second terminal in the page opens telnet sessions into the VAX.
+- **Coming next**: the VAX 4000-200 identity (KA660).
 
 ## Getting started
 
@@ -64,14 +64,20 @@ The **Network** menu chooses how the VAX's Ethernet controller (XQA0) is connect
 - **Virtual** (default): a private network where a gateway at 10.0.2.2 answers; give the
   VAX the address 10.0.2.15.
 - **Local bridge**: the VAX appears on your local network with its own address (set in
-  OpenVMS, e.g. 192.168.2.77), through the small *vax-bridge* relay running on your PC
-  (Windows, with [Npcap](https://npcap.com); `vax-bridge.exe` is on the
-  [Releases](https://github.com/ve2cuy/vax-emu/releases) page: run
-  `vax-bridge --iface <your PC's address>`). Other computers can then ping it and open
+  OpenVMS, e.g. 192.168.2.77), through the small *vax-bridge* relay running on your
+  computer. It is on the [Releases](https://github.com/ve2cuy/vax-emu/releases) page for
+  Windows (needs [Npcap](https://npcap.com)), Linux (needs libpcap; run it with `sudo`,
+  or once `sudo setcap cap_net_raw,cap_net_admin=eip vax-bridge`) and macOS (run it with
+  `sudo`). Start it with `vax-bridge --iface <network card or your address>`; a wired
+  card works best. Other computers can then ping it and open
   telnet sessions; your own PC reaches its telnet at `localhost:2323`.
 
 The toolbar's book icon opens an **OpenVMS cheat sheet**: basic DCL commands, important
 directories, and how to change the TCP/IP address, gateway or name servers.
+
+Above the screen, the **Telnet** tab opens a telnet session into the VAX in a second
+terminal, next to the console: several logins at once, as on a real system. TCP/IP must be
+running in OpenVMS (the Install TCP/IP button, or the repository's OpenVMS + TCP/IP disk).
 
 ## Disks and OpenVMS
 

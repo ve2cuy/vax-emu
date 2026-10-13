@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=33be9b43">
-  <link rel="stylesheet" href="style.css?v=33be9b43">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=16820855">
+  <link rel="stylesheet" href="style.css?v=16820855">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -317,8 +317,16 @@
       </header>
       <div class="workspace">
       <div class="stage">
+        <div class="term-tabs" role="tablist">
+          <button id="tab-console" type="button" class="term-tab active" role="tab" aria-selected="true" data-i18n="tab.console">Console</button>
+          <button id="tab-telnet" type="button" class="term-tab" role="tab" aria-selected="false"
+                  title="Telnet session to the VAX (TCP/IP must be running in OpenVMS)" data-i18n-title="tab.telnet.tip">Telnet</button>
+          <span id="telnet-status" class="telnet-status" role="status"></span>
+          <button id="telnet-button" type="button" class="secondary small-button" hidden></button>
+        </div>
         <div id="monitor" class="monitor terminal-monitor">
           <div id="terminal" class="terminal" aria-label="VAX console terminal" data-i18n-aria="term.aria"></div>
+          <div id="telnet-terminal" class="terminal" aria-label="Telnet terminal" data-i18n-aria="tab.telnet.aria" hidden></div>
           <div id="overlay" class="overlay">
             <!-- Affiché sans JavaScript (aucune traduction possible : les quatre langues). -->
             <div class="js-required" role="alert">
@@ -349,7 +357,7 @@
       </div>
     </main>
   </div>
-  <script src="vendor/xterm/xterm.js?v=33be9b43"></script>
-  <script type="module" src="main.js?v=33be9b43"></script>
+  <script src="vendor/xterm/xterm.js?v=16820855"></script>
+  <script type="module" src="main.js?v=16820855"></script>
 </body>
 </html>

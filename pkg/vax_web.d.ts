@@ -38,9 +38,35 @@ export class Emulator {
      */
     load_rom(data: Uint8Array, server: boolean): void;
     /**
+     * Ferme la connexion `id` et l'oublie.
+     */
+    net_close(id: number): void;
+    /**
+     * Ouvre une connexion TCP de la passerelle virtuelle vers le port `port` du VAX
+     * (terminal telnet de la page); rend son numéro.
+     */
+    net_connect(port: number): number;
+    /**
+     * Adresse IP du VAX connue de la passerelle virtuelle (10.0.2.15 tant qu'il ne s'est
+     * pas annoncé).
+     */
+    net_guest_ip(): string;
+    /**
+     * Octets reçus du VAX sur la connexion `id`.
+     */
+    net_recv(id: number): Uint8Array;
+    /**
      * Trame reçue du relais, pour le VAX.
      */
     net_rx(frame: Uint8Array): void;
+    /**
+     * Octets à envoyer au VAX sur la connexion `id`.
+     */
+    net_send(id: number, data: Uint8Array): void;
+    /**
+     * État de la connexion `id` : 0 en cours d'ouverture, 1 ouverte, 2 fermée.
+     */
+    net_state(id: number): number;
     /**
      * Prochaine trame émise par le VAX, pour le relais (undefined s'il n'y en a pas).
      */
@@ -110,7 +136,13 @@ export interface InitOutput {
     readonly emulator_flush_disks: (a: number) => void;
     readonly emulator_load_nvr: (a: number, b: number, c: number) => void;
     readonly emulator_load_rom: (a: number, b: number, c: number, d: number) => void;
+    readonly emulator_net_close: (a: number, b: number) => void;
+    readonly emulator_net_connect: (a: number, b: number) => number;
+    readonly emulator_net_guest_ip: (a: number) => [number, number];
+    readonly emulator_net_recv: (a: number, b: number) => [number, number];
     readonly emulator_net_rx: (a: number, b: number, c: number) => void;
+    readonly emulator_net_send: (a: number, b: number, c: number, d: number) => void;
+    readonly emulator_net_state: (a: number, b: number) => number;
     readonly emulator_net_tx: (a: number) => [number, number];
     readonly emulator_new: (a: number) => number;
     readonly emulator_now_ms: (a: number) => number;

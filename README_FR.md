@@ -19,8 +19,8 @@ modèle 200.
   RRD40. **OpenVMS VAX V7.1 s'installe depuis son CD**, démarre et accepte les connexions.
 - **Réseau** : contrôleur Ethernet DELQA (XQA0) sur un réseau virtuel privé.
   **CMU-OpenVMS/IP** (TCP/IP) s'installe et fonctionne.
-- **À venir** : un terminal telnet vers le VAX dans la page, l'identité du VAX 4000-200
-  (KA660).
+- **Telnet** : un deuxième terminal dans la page ouvre des sessions telnet vers le VAX.
+- **À venir** : l'identité du VAX 4000-200 (KA660).
 
 ## Pour commencer
 
@@ -68,15 +68,22 @@ Le menu **Réseau** choisit comment le contrôleur Ethernet du VAX (XQA0) est br
 - **Virtuel** (par défaut) : un réseau privé où répond une passerelle, 10.0.2.2; donnez au
   VAX l'adresse 10.0.2.15.
 - **Pont local** : le VAX paraît sur votre réseau local avec sa propre adresse (réglée dans
-  OpenVMS, ex. 192.168.2.77), grâce au petit relais *vax-bridge* qui tourne sur votre PC
-  (Windows, avec [Npcap](https://npcap.com); `vax-bridge.exe` est dans la page
-  [Releases](https://github.com/ve2cuy/vax-emu/releases) : lancez
-  `vax-bridge --iface <adresse de votre PC>`). Les autres ordinateurs peuvent alors le
+  OpenVMS, ex. 192.168.2.77), grâce au petit relais *vax-bridge* qui tourne sur votre
+  ordinateur. Il est dans la page [Releases](https://github.com/ve2cuy/vax-emu/releases)
+  pour Windows (avec [Npcap](https://npcap.com)), Linux (avec libpcap; à lancer avec
+  `sudo`, ou une fois `sudo setcap cap_net_raw,cap_net_admin=eip vax-bridge`) et macOS (à
+  lancer avec `sudo`). Lancez-le par `vax-bridge --iface <carte réseau ou votre adresse>`;
+  une carte filaire convient le mieux. Les autres ordinateurs peuvent alors le
   « pinger » et s'y connecter par telnet; votre PC joint son telnet à `localhost:2323`.
 
 L'icône du livre, dans la barre du haut, ouvre un **aide-mémoire OpenVMS** : commandes DCL
 de base, répertoires importants, et comment changer l'adresse TCP/IP, la passerelle ou
 les serveurs de noms.
+
+Au-dessus de l'écran, l'onglet **Telnet** ouvre une session telnet vers le VAX dans un
+deuxième terminal, à côté de la console : plusieurs connexions à la fois, comme sur un vrai
+système. TCP/IP doit être en marche dans OpenVMS (bouton Installer TCP/IP, ou le disque
+OpenVMS + TCP/IP du dépôt).
 
 ## Disques et OpenVMS
 

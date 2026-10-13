@@ -102,6 +102,51 @@ export class Emulator {
         wasm.emulator_load_rom(this.__wbg_ptr, ptr0, len0, server);
     }
     /**
+     * Ferme la connexion `id` et l'oublie.
+     * @param {number} id
+     */
+    net_close(id) {
+        wasm.emulator_net_close(this.__wbg_ptr, id);
+    }
+    /**
+     * Ouvre une connexion TCP de la passerelle virtuelle vers le port `port` du VAX
+     * (terminal telnet de la page); rend son numéro.
+     * @param {number} port
+     * @returns {number}
+     */
+    net_connect(port) {
+        const ret = wasm.emulator_net_connect(this.__wbg_ptr, port);
+        return ret >>> 0;
+    }
+    /**
+     * Adresse IP du VAX connue de la passerelle virtuelle (10.0.2.15 tant qu'il ne s'est
+     * pas annoncé).
+     * @returns {string}
+     */
+    net_guest_ip() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.emulator_net_guest_ip(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Octets reçus du VAX sur la connexion `id`.
+     * @param {number} id
+     * @returns {Uint8Array}
+     */
+    net_recv(id) {
+        const ret = wasm.emulator_net_recv(this.__wbg_ptr, id);
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+    /**
      * Trame reçue du relais, pour le VAX.
      * @param {Uint8Array} frame
      */
@@ -109,6 +154,25 @@ export class Emulator {
         const ptr0 = passArray8ToWasm0(frame, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
         wasm.emulator_net_rx(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
+     * Octets à envoyer au VAX sur la connexion `id`.
+     * @param {number} id
+     * @param {Uint8Array} data
+     */
+    net_send(id, data) {
+        const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.emulator_net_send(this.__wbg_ptr, id, ptr0, len0);
+    }
+    /**
+     * État de la connexion `id` : 0 en cours d'ouverture, 1 ouverte, 2 fermée.
+     * @param {number} id
+     * @returns {number}
+     */
+    net_state(id) {
+        const ret = wasm.emulator_net_state(this.__wbg_ptr, id);
+        return ret;
     }
     /**
      * Prochaine trame émise par le VAX, pour le relais (undefined s'il n'y en a pas).
@@ -243,18 +307,18 @@ function __wbg_get_imports() {
         __wbg___wbindgen_throw_41e9ee4f547fc59a: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
-        __wbg_flush_a9eba17a53cb94df: function(arg0) {
+        __wbg_flush_8d0e260937c9136a: function(arg0) {
             arg0.flush();
         },
-        __wbg_read_e710ab57cab1a6d7: function(arg0, arg1, arg2, arg3) {
+        __wbg_read_9cc99c60c789562e: function(arg0, arg1, arg2, arg3) {
             const ret = arg0.read(arg1, getArrayU8FromWasm0(arg2, arg3));
             return ret;
         },
-        __wbg_size_a5513e4f8851fe80: function(arg0) {
+        __wbg_size_96bd3a3358e1a6fd: function(arg0) {
             const ret = arg0.size();
             return ret;
         },
-        __wbg_write_1a8318c66bccd36e: function(arg0, arg1, arg2, arg3) {
+        __wbg_write_72bc18aff667c2a3: function(arg0, arg1, arg2, arg3) {
             const ret = arg0.write(arg1, getArrayU8FromWasm0(arg2, arg3));
             return ret;
         },

@@ -6,7 +6,7 @@
 
 import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js';
 
-const VERSION = '0.2.3';
+const VERSION = '0.3.0';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -425,6 +425,7 @@ function powerOff(user = false) {
   worker = null;
   running = false;
   speed.textContent = '';
+  telnetStateChanged('off', null);
   if (user) {
     prefs.power = false;
     savePrefs();
@@ -455,6 +456,7 @@ function onWorkerMessage(e) {
   const msg = e.data;
   switch (msg.type) {
     case 'ready': {
+      if (telnetState === 'off') telnetStateChanged('idle', null);
       // Une image disparue reste signalée (le message « En marche » ne la cache pas).
       const lost = prefs.disks.findIndex((d) => d?.missing);
       if (lost >= 0) showStatus('disk.lost', { unit: `DUA${lost}`, name: prefs.disks[lost].name });
@@ -489,6 +491,12 @@ function onWorkerMessage(e) {
       break;
     case 'diskLost':
       diskLost(msg.unit);
+      break;
+    case 'tcp':
+      telnetInput(msg.bytes);
+      break;
+    case 'tcpState':
+      telnetStateChanged(msg.state, msg.ip);
       break;
     case 'swapped':
       swapDone?.();
@@ -866,6 +874,150 @@ async function showLocalDisks() {
 renderDisks();
 checkDisks();
 showLocalDisks();
+
+// ------------------------------------------------------------------ terminal telnet
+
+// Deuxième terminal : une session telnet vers le VAX (port 23), ouverte par la passerelle
+// virtuelle de la machine (10.0.2.2). Il faut TCP/IP en marche dans OpenVMS (bouton
+// « Install TCP/IP », ou le disque OpenVMS + TCP/IP du dépôt). Le protocole telnet est
+// traité ici : options ECHO et SGA acceptées, type de terminal VT100, taille 80 × 24.
+const tabConsole = document.getElementById('tab-console');
+const tabTelnet = document.getElementById('tab-telnet');
+const consoleBox = document.getElementById('terminal');
+const telnetBox = document.getElementById('telnet-terminal');
+const telnetStatus = document.getElementById('telnet-status');
+const telnetButton = document.getElementById('telnet-button');
+const IAC = 255, DONT = 254, DO = 253, WONT = 252, WILL = 251, SB = 250, SE = 240;
+let telnetTerm = null;
+let telnetState = 'off';     // off, idle, connecting, open, closed, failed
+let telnetIp = '';
+let telnetWasOpen = false;
+let telnetParse = { mode: 0, cmd: 0, sub: [] };
+
+function telnetSend(bytes) {
+  worker?.postMessage({ type: 'tcpSend', bytes: new Uint8Array(bytes) });
+}
+
+function showTelnet() {
+  const onTelnet = tabTelnet.classList.contains('active');
+  telnetStatus.hidden = telnetButton.hidden = !onTelnet;
+  if (!onTelnet) return;
+  const key = { off: 'telnet.off', idle: 'telnet.idle', connecting: 'telnet.connecting', open: 'telnet.open', closed: 'telnet.closed', failed: 'telnet.failed' }[telnetState];
+  telnetStatus.textContent = t(key, { ip: telnetIp });
+  telnetButton.hidden = telnetState === 'off';
+  telnetButton.textContent = t(telnetState === 'open' || telnetState === 'connecting' ? 'telnet.disconnect' : 'telnet.connect');
+}
+languageListeners.push(showTelnet);
+
+function telnetConnect() {
+  if (!running) return;
+  telnetParse = { mode: 0, cmd: 0, sub: [] };
+  telnetWasOpen = false;
+  telnetState = 'connecting';
+  worker.postMessage({ type: 'tcpOpen', port: 23 });
+  showTelnet();
+  telnetTerm?.focus();
+}
+
+function telnetStateChanged(state, ip) {
+  if (ip) telnetIp = ip;
+  if (state === 'off') {
+    telnetState = 'off';
+  } else if (state === 'open') {
+    telnetState = 'open';
+    telnetWasOpen = true;
+  } else if (state === 'closed') {
+    // Fermée sans avoir été ouverte : le VAX n'a pas répondu (TCP/IP arrêté ?).
+    telnetState = telnetWasOpen || telnetState !== 'connecting' ? 'closed' : 'failed';
+  } else {
+    telnetState = state;
+  }
+  showTelnet();
+}
+
+/** Octets reçus : les commandes telnet (IAC) sont traitées, le reste va au terminal. */
+function telnetInput(bytes) {
+  const out = [];
+  const p = telnetParse;
+  for (const b of bytes) {
+    if (p.mode === 0) {
+      if (b === IAC) p.mode = 1;
+      else out.push(b);
+    } else if (p.mode === 1) {
+      if (b === IAC) { out.push(b); p.mode = 0; }
+      else if (b === SB) { p.sub = []; p.mode = 3; }
+      else if (b >= WILL && b <= DONT) { p.cmd = b; p.mode = 2; }
+      else p.mode = 0;
+    } else if (p.mode === 2) {
+      telnetOption(p.cmd, b);
+      p.mode = 0;
+    } else if (p.mode === 3) {
+      if (b === IAC) p.mode = 4;
+      else p.sub.push(b);
+    } else {
+      // Fin de la sous-négociation : « envoie ton type de terminal » (option 24, SEND).
+      if (b === SE && p.sub[0] === 24 && p.sub[1] === 1) {
+        telnetSend([IAC, SB, 24, 0, ...stringToBytes('VT100'), IAC, SE]);
+      }
+      p.mode = b === SE ? 0 : 3;
+    }
+  }
+  if (out.length) telnetTerm?.write(bytesToString(new Uint8Array(out)));
+}
+
+function telnetOption(cmd, opt) {
+  if (cmd === WILL) telnetSend([IAC, opt === 1 || opt === 3 ? DO : DONT, opt]);
+  else if (cmd === DO) {
+    if (opt === 3 || opt === 24) telnetSend([IAC, WILL, opt]);
+    else if (opt === 31) telnetSend([IAC, WILL, 31, IAC, SB, 31, 0, 80, 0, 24, IAC, SE]);
+    else telnetSend([IAC, WONT, opt]);
+  }
+}
+
+function showTab(telnet) {
+  tabConsole.classList.toggle('active', !telnet);
+  tabTelnet.classList.toggle('active', telnet);
+  tabConsole.setAttribute('aria-selected', String(!telnet));
+  tabTelnet.setAttribute('aria-selected', String(telnet));
+  consoleBox.hidden = telnet;
+  telnetBox.hidden = !telnet;
+  overlay.classList.toggle('behind', telnet);
+  if (telnet && !telnetTerm) {
+    telnetTerm = new window.Terminal({
+      cols: 80,
+      rows: 24,
+      fontFamily: term.options.fontFamily,
+      fontSize: prefs.fontSize,
+      cursorBlink: true,
+      scrollback: 5000,
+      theme: { background: '#000000', foreground: '#d8d8d8', cursor: '#d8d8d8' },
+    });
+    telnetTerm.open(telnetBox);
+    window.vaxTelnet = telnetTerm;   // pour les essais
+    telnetTerm.onData((data) => {
+      if (telnetState !== 'open') return;
+      // Un octet 255 se double (IAC IAC).
+      telnetSend([...stringToBytes(data)].flatMap((b) => (b === IAC ? [IAC, IAC] : [b])));
+    });
+  }
+  if (telnet) {
+    if (telnetState === 'off' && running) telnetState = 'idle';
+    if (telnetState === 'idle') telnetConnect();
+    telnetTerm.focus();
+  } else {
+    term.focus();
+  }
+  showTelnet();
+}
+
+tabConsole.addEventListener('click', () => showTab(false));
+tabTelnet.addEventListener('click', () => showTab(true));
+telnetButton.addEventListener('click', () => {
+  if (telnetState === 'open' || telnetState === 'connecting') worker?.postMessage({ type: 'tcpClose' });
+  else telnetConnect();
+});
+fontSize.addEventListener('change', () => { if (telnetTerm) telnetTerm.options.fontSize = prefs.fontSize; });
+showTelnet();
 
 // ------------------------------------------------------------------ réseau
 
