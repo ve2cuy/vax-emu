@@ -222,6 +222,11 @@ alors à côté de Console et Telnet : OpenVMS y affiche DECwindows Motif.
 - Le verrouillage des majuscules agit sur les lettres sans être transmis au VAX, et les
   touches tenues sont relâchées quand la page perd le clavier (Alt+Tab, capture d'écran) :
   sinon DECwindows croirait Maj ou Alt enfoncée et ses fenêtres ne réagiraient plus aux clics.
+- **Alt+F4** ferme une fenêtre de DECwindows, mais au clavier il ferme aussi le fureteur : la
+  page ne peut pas l'empêcher. Utilisez le bouton **Alt+F4** à côté des onglets, ou le bouton
+  **Plein écran** : là, Alt+F4, Alt+Tab et Échap vont au VAX (Chrome et Edge; tenir Échap
+  pour en sortir). La page demande aussi une confirmation avant de se fermer quand le VAX est
+  en marche.
 - Touches : F1 à F12, les flèches, Inser, Suppr, Début, Fin et Page préc./suiv. sont les
   touches d'édition du LK201; Alt est Compose; Échap vaut F11.
 - OpenVMS doit être installé avec le support DECwindows (de base et station de travail)

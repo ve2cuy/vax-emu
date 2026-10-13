@@ -1205,6 +1205,7 @@ button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--error)
 .vax-screen { display: block; width: min(1024px, 100%); height: auto; aspect-ratio: 1024 / 864; border-radius: 6px; background: #000;
   outline: none; cursor: none; touch-action: none; }
 .vax-screen[hidden] { display: none; }
+.vax-screen:fullscreen { width: 100vw; height: 100vh; aspect-ratio: auto; object-fit: contain; border-radius: 0; box-shadow: none; }
 .vax-screen:focus { box-shadow: 0 0 0 2px var(--accent); }
 .terminal .xterm:focus-within { box-shadow: 0 0 0 2px var(--accent); border-radius: 4px; }
 .stage > .status { width: auto; max-width: 100%; }

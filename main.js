@@ -4,10 +4,10 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=93d1248c';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=93d1248c';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=701083f3';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=701083f3';
 
-const VERSION = '0.7.2';
+const VERSION = '0.7.3';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -1011,6 +1011,8 @@ const consoleBox = document.getElementById('terminal');
 const tabScreen = document.getElementById('tab-screen');
 const screenBox = document.getElementById('vax-screen');
 const screenCtx = screenBox.getContext('2d');
+const screenClose = document.getElementById('screen-close');
+const screenFull = document.getElementById('screen-full');
 const telnetBox = document.getElementById('telnet-terminal');
 const telnetStatus = document.getElementById('telnet-status');
 const telnetButton = document.getElementById('telnet-button');
@@ -1112,6 +1114,8 @@ function showTab(which) {
   consoleBox.hidden = tab !== 'console';
   telnetBox.hidden = !telnet;
   screenBox.hidden = tab !== 'screen';
+  screenClose.hidden = tab !== 'screen';
+  screenFull.hidden = tab !== 'screen' || !screenBox.requestFullscreen;
   overlay.classList.toggle('behind', tab !== 'console');
   if (telnet && !telnetTerm) {
     telnetTerm = new window.Terminal({
@@ -1232,8 +1236,12 @@ function screenKey(e) {
 function screenPointer(e) {
   if (!running) return;
   const r = screenBox.getBoundingClientRect();
-  const x = Math.max(0, Math.min(1023, Math.round(((e.clientX - r.left) * 1024) / r.width)));
-  const y = Math.max(0, Math.min(863, Math.round(((e.clientY - r.top) * 864) / r.height)));
+  // En plein écran l'image garde ses proportions, centrée dans le cadre.
+  const scale = Math.min(r.width / 1024, r.height / 864);
+  const left = r.left + (r.width - 1024 * scale) / 2;
+  const top = r.top + (r.height - 864 * scale) / 2;
+  const x = Math.max(0, Math.min(1023, Math.round((e.clientX - left) / scale)));
+  const y = Math.max(0, Math.min(863, Math.round((e.clientY - top) / scale)));
   // Boutons de la page (1 gauche, 2 droit, 4 milieu) → gauche, milieu, droit.
   const buttons = (e.buttons & 1) | ((e.buttons & 4) >> 1) | ((e.buttons & 2) << 1);
   worker?.postMessage({ type: 'vmouse', x, y, buttons });
@@ -1252,6 +1260,32 @@ screenBox.addEventListener('pointerdown', (e) => {
   screenPointer(e);
 });
 screenBox.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// Alt+F4 ferme une fenêtre de DECwindows… et, au clavier, le fureteur lui-même : la page ne
+// peut pas l'empêcher. Trois parades : un bouton qui envoie Alt+F4 au VAX; le plein écran,
+// où le fureteur laisse la page prendre les touches du système (Alt+F4, Alt+Tab, Échap);
+// et une confirmation avant de quitter la page quand le VAX est en marche.
+screenClose.addEventListener('pointerdown', (e) => e.preventDefault());
+screenClose.addEventListener('click', () => {
+  if (!running) return;
+  for (const [code, state] of [['AltLeft', 0], ['F4', 0], ['F4', 1], ['AltLeft', 1]]) vkey(code, state);
+  screenBox.focus();
+});
+screenFull.addEventListener('click', async () => {
+  try {
+    await screenBox.requestFullscreen();
+    await navigator.keyboard?.lock?.();
+  } catch {
+    // Plein écran refusé : l'écran reste dans la page.
+  }
+  screenBox.focus();
+});
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) navigator.keyboard?.unlock?.();
+});
+addEventListener('beforeunload', (e) => {
+  if (running) e.preventDefault();
+});
 modelList.addEventListener('change', showScreenTab);
 showScreenTab();
 clearScreen();

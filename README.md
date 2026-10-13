@@ -209,6 +209,10 @@ appears next to Console and Telnet: OpenVMS shows DECwindows Motif there.
 - Caps Lock acts on letters without being sent to the VAX, and held keys are released when
   the page loses the keyboard (Alt+Tab, screenshots): otherwise DECwindows would believe
   Shift or Alt is down and its windows would stop reacting to clicks.
+- **Alt+F4** closes a DECwindows window, but on the keyboard it also closes the browser: the
+  page cannot prevent it. Use the **Alt+F4** button next to the tabs, or the **Full screen**
+  button: there Alt+F4, Alt+Tab and Esc go to the VAX (Chrome and Edge; hold Esc to leave).
+  The page also asks for confirmation before closing while the VAX is running.
 - Keys: F1 to F12, the arrows, Insert, Delete, Home, End and Page Up/Down are the LK201
   editing keys; Alt is Compose; Escape stands for F11.
 - OpenVMS must be installed with DECwindows support (base and workstation) and the

@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=93d1248c">
-  <link rel="stylesheet" href="style.css?v=93d1248c">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=701083f3">
+  <link rel="stylesheet" href="style.css?v=701083f3">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -346,6 +346,12 @@
                   title="Graphics screen of the VAXstation (DECwindows)" data-i18n-title="tab.screen.tip" data-i18n="tab.screen">Screen</button>
           <span id="telnet-status" class="telnet-status" role="status"></span>
           <button id="telnet-button" type="button" class="secondary small-button" hidden></button>
+          <button id="screen-close" type="button" class="secondary small-button" hidden
+                  title="Send Alt+F4 to the VAX (closes the DECwindows window): on the keyboard, Alt+F4 closes the browser"
+                  data-i18n-title="screen.close.tip">Alt+F4</button>
+          <button id="screen-full" type="button" class="secondary small-button" hidden
+                  title="Full screen: Alt+F4, Alt+Tab and Esc then go to the VAX (hold Esc to leave)"
+                  data-i18n-title="screen.full.tip" data-i18n="screen.full">Full screen</button>
         </div>
         <div id="monitor" class="monitor terminal-monitor">
           <div id="terminal" class="terminal" aria-label="VAX console terminal" data-i18n-aria="term.aria"></div>
@@ -534,7 +540,7 @@
       </div>
     </form>
   </dialog>
-  <script src="vendor/xterm/xterm.js?v=93d1248c"></script>
-  <script type="module" src="main.js?v=93d1248c"></script>
+  <script src="vendor/xterm/xterm.js?v=701083f3"></script>
+  <script type="module" src="main.js?v=701083f3"></script>
 </body>
 </html>
