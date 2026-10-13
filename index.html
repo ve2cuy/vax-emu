@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=47e37503">
-  <link rel="stylesheet" href="style.css?v=47e37503">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=906f12df">
+  <link rel="stylesheet" href="style.css?v=906f12df">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -112,6 +112,7 @@
               <select id="model-list">
                 <option value="microvax" data-i18n="model.microvax">MicroVAX 3900</option>
                 <option value="server" data-i18n="model.server">VAXserver 3900</option>
+                <option value="station" data-i18n="model.station">VAXstation 3900 (graphics screen)</option>
               </select>
             </label>
             <p class="hint" data-i18n="machine.next">Memory and model take effect at the next power-on.</p>
@@ -340,12 +341,16 @@
           <button id="tab-console" type="button" class="term-tab active" role="tab" aria-selected="true" data-i18n="tab.console">Console</button>
           <button id="tab-telnet" type="button" class="term-tab" role="tab" aria-selected="false"
                   title="Telnet session to the VAX (TCP/IP must be running in OpenVMS)" data-i18n-title="tab.telnet.tip">Telnet</button>
+          <button id="tab-screen" type="button" class="term-tab" role="tab" aria-selected="false" hidden
+                  title="Graphics screen of the VAXstation (DECwindows)" data-i18n-title="tab.screen.tip" data-i18n="tab.screen">Screen</button>
           <span id="telnet-status" class="telnet-status" role="status"></span>
           <button id="telnet-button" type="button" class="secondary small-button" hidden></button>
         </div>
         <div id="monitor" class="monitor terminal-monitor">
           <div id="terminal" class="terminal" aria-label="VAX console terminal" data-i18n-aria="term.aria"></div>
           <div id="telnet-terminal" class="terminal" aria-label="Telnet terminal" data-i18n-aria="tab.telnet.aria" hidden></div>
+          <canvas id="vax-screen" class="vax-screen" width="1024" height="864" tabindex="0" hidden
+                  aria-label="Graphics screen" data-i18n-aria="tab.screen.aria"></canvas>
           <div id="overlay" class="overlay">
             <!-- Affiché sans JavaScript (aucune traduction possible : les quatre langues). -->
             <div class="js-required" role="alert">
@@ -528,7 +533,7 @@
       </div>
     </form>
   </dialog>
-  <script src="vendor/xterm/xterm.js?v=47e37503"></script>
-  <script type="module" src="main.js?v=47e37503"></script>
+  <script src="vendor/xterm/xterm.js?v=906f12df"></script>
+  <script type="module" src="main.js?v=906f12df"></script>
 </body>
 </html>

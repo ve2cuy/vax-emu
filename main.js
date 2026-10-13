@@ -4,10 +4,10 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=47e37503';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=47e37503';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=906f12df';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=906f12df';
 
-const VERSION = '0.5.6';
+const VERSION = '0.6.0';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -36,7 +36,7 @@ const prefs = {
   open: ['machine'], // sections ouvertes du menu
   lang: null,        // langue de l'interface (null : celle du fureteur)
   mem: 64,           // mémoire (Mo)
-  model: 'microvax', // 'microvax' ou 'server'
+  model: 'microvax', // 'microvax', 'server' ou 'station' (VAXstation : carte graphique QVSS)
   fontSize: 16,
   fontFamily: '',    // police du terminal ('' : celle par défaut)
   keyBar: null,      // touches à l'écran (null : seulement sur un écran tactile)
@@ -433,7 +433,7 @@ function updateButtons() {
 }
 
 function modelName() {
-  return t(prefs.model === 'server' ? 'model.server' : 'model.microvax');
+  return t({ server: 'model.server', station: 'model.station' }[prefs.model] ?? 'model.microvax').replace(/\s*[(（].*$/, '');
 }
 
 async function powerOn() {
@@ -455,11 +455,13 @@ async function powerOn() {
     nvr: nvr ? new Uint8Array(nvr) : null,
     mem: prefs.mem,
     server: prefs.model === 'server',
+    qvss: prefs.model === 'station',
     disks: prefs.disks.flatMap((d, unit) => (d?.file ? [{ unit, drive: d.drive, file: d.file }] : [])),
     bridge: prefs.netMode === 'bridge' ? prefs.bridgeUrl : null,
     turbo: prefs.turbo,
   });
   showNet(prefs.netMode === 'bridge' ? 'connecting' : 'virtual');
+  clearScreen();
   running = true;
   filesPowerChanged();
   prefs.power = true;
@@ -542,6 +544,11 @@ function onWorkerMessage(e) {
       break;
     case 'diskLost':
       diskLost(msg.unit);
+      break;
+    case 'video':
+      screenCtx.putImageData(new ImageData(new Uint8ClampedArray(msg.pixels.buffer), 1024, msg.h), 0, msg.y);
+      break;
+    case 'bell':
       break;
     case 'fs':
       filesReply(msg);
@@ -992,6 +999,9 @@ showLocalDisks();
 const tabConsole = document.getElementById('tab-console');
 const tabTelnet = document.getElementById('tab-telnet');
 const consoleBox = document.getElementById('terminal');
+const tabScreen = document.getElementById('tab-screen');
+const screenBox = document.getElementById('vax-screen');
+const screenCtx = screenBox.getContext('2d');
 const telnetBox = document.getElementById('telnet-terminal');
 const telnetStatus = document.getElementById('telnet-status');
 const telnetButton = document.getElementById('telnet-button');
@@ -1082,14 +1092,18 @@ function telnetOption(cmd, opt) {
   }
 }
 
-function showTab(telnet) {
-  tabConsole.classList.toggle('active', !telnet);
-  tabTelnet.classList.toggle('active', telnet);
-  tabConsole.setAttribute('aria-selected', String(!telnet));
-  tabTelnet.setAttribute('aria-selected', String(telnet));
-  consoleBox.hidden = telnet;
+/** Montre un onglet : la console (faux), le terminal telnet (vrai) ou l'écran graphique ('screen'). */
+function showTab(which) {
+  const tab = which === true ? 'telnet' : which === false ? 'console' : which;
+  const telnet = tab === 'telnet';
+  for (const [button, name] of [[tabConsole, 'console'], [tabTelnet, 'telnet'], [tabScreen, 'screen']]) {
+    button.classList.toggle('active', tab === name);
+    button.setAttribute('aria-selected', String(tab === name));
+  }
+  consoleBox.hidden = tab !== 'console';
   telnetBox.hidden = !telnet;
-  overlay.classList.toggle('behind', telnet);
+  screenBox.hidden = tab !== 'screen';
+  overlay.classList.toggle('behind', tab !== 'console');
   if (telnet && !telnetTerm) {
     telnetTerm = new window.Terminal({
       cols: 80,
@@ -1112,6 +1126,8 @@ function showTab(telnet) {
     if (telnetState === 'off' && running) telnetState = 'idle';
     if (telnetState === 'idle') telnetConnect();
     telnetTerm.focus();
+  } else if (tab === 'screen') {
+    screenBox.focus();
   } else {
     term.focus();
   }
@@ -1120,6 +1136,55 @@ function showTab(telnet) {
 
 tabConsole.addEventListener('click', () => showTab(false));
 tabTelnet.addEventListener('click', () => showTab(true));
+tabScreen.addEventListener('click', () => showTab('screen'));
+
+// ------------------------------------------------------------------ écran graphique (VAXstation)
+
+// Le fil envoie les lignes changées de l'écran du QVSS (message « video »); le clavier
+// et la souris de la page vont au clavier LK201 et à la souris du VAX. Le pointeur du VAX
+// suit celui de la page : la carte lui envoie les déplacements qui l'en rapprochent.
+function showScreenTab() {
+  const on = prefs.model === 'station';
+  tabScreen.hidden = !on;
+  if (!on && tabScreen.classList.contains('active')) showTab(false);
+}
+
+/** VAX allumé : écran noir tant que rien n'est dessiné. */
+function clearScreen() {
+  screenCtx.fillStyle = '#000';
+  screenCtx.fillRect(0, 0, 1024, 864);
+}
+
+function screenKey(e) {
+  if (!running) return;
+  // Les raccourcis du fureteur (F5, Ctrl+W…) ne doivent pas agir pendant qu'on tape au VAX.
+  e.preventDefault();
+  worker?.postMessage({ type: 'vkey', code: e.code, state: e.type === 'keyup' ? 1 : e.repeat ? 2 : 0 });
+}
+
+function screenPointer(e) {
+  if (!running) return;
+  const r = screenBox.getBoundingClientRect();
+  const x = Math.max(0, Math.min(1023, Math.round(((e.clientX - r.left) * 1024) / r.width)));
+  const y = Math.max(0, Math.min(863, Math.round(((e.clientY - r.top) * 864) / r.height)));
+  // Boutons de la page (1 gauche, 2 droit, 4 milieu) → gauche, milieu, droit.
+  const buttons = (e.buttons & 1) | ((e.buttons & 4) >> 1) | ((e.buttons & 2) << 1);
+  worker?.postMessage({ type: 'vmouse', x, y, buttons });
+}
+
+screenBox.addEventListener('keydown', screenKey);
+screenBox.addEventListener('keyup', screenKey);
+screenBox.addEventListener('pointermove', screenPointer);
+screenBox.addEventListener('pointerup', screenPointer);
+screenBox.addEventListener('pointerdown', (e) => {
+  screenBox.focus();
+  screenBox.setPointerCapture(e.pointerId);
+  screenPointer(e);
+});
+screenBox.addEventListener('contextmenu', (e) => e.preventDefault());
+modelList.addEventListener('change', showScreenTab);
+showScreenTab();
+clearScreen();
 telnetButton.addEventListener('click', () => {
   if (telnetState === 'open' || telnetState === 'connecting') worker?.postMessage({ type: 'tcpClose' });
   else telnetConnect();

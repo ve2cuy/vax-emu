@@ -6,6 +6,9 @@
 // turbo {on} (quand le VAX travaille — calcul, disques, console —, le temps simulé va aussi
 // vite que le fureteur le permet; quand il attend sans rien faire, retour au temps réel), speed {factor} (vitesse du processeur : ×1 = 10 MIPS; pas encore offerte dans la page :
 // le fureteur plafonne vers 16 MIPS et la boucle d'attente de VMS n'est pas reconnue),
+// vkey {code, state}, vmouse {x, y, buttons} (clavier et souris de l'écran graphique; start
+// {qvss: true} installe la carte; le fil envoie video {y, h, pixels} pour les lignes
+// changées et bell quand la cloche du clavier sonne),
 // tcpOpen {port, ch} (connexion TCP de la page vers le VAX sur le canal `ch` : 0, l'onglet
 // Telnet; 1, la session du gestionnaire de fichiers; répond tcpState {ch, state, ip} puis
 // tcp {ch, bytes} à chaque arrivée), tcpSend {ch, bytes}, tcpClose {ch},
@@ -23,8 +26,8 @@
 // Disques : fichiers de l'OPFS (dossier « disks »), ouverts en accès synchrone et branchés
 // sur les lecteurs MSCP (disks : [{unit, drive, file}]).
 
-import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=47e37503';
-import { fsRun, fsError } from './fs-ops.js?v=47e37503';
+import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=906f12df';
+import { fsRun, fsError } from './fs-ops.js?v=906f12df';
 
 const version = new URL(import.meta.url).search; // ?v=… transmis par la page
 let ready = null;
@@ -40,6 +43,9 @@ let handles = new Map();   // lecteur -> accès synchrone OPFS ouvert (fermés �
 let diskObjs = new Map();  // lecteur -> image présentée à la machine (gestionnaire de fichiers)
 let bridgeUrl = null;
 let turbo = false;
+let video = false;       // carte graphique QVSS installée
+let videoTime = 0;
+const VIDEO_MS = 33;     // au plus 30 images par seconde vers la page
 const tcps = new Map();  // canal -> {id, state} : connexions TCP de la page vers le VAX
 let burst = false;       // Turbo : en rafale (temps simulé détaché du temps réel)
 let lastActivity = 0;    // dernière activité du VAX (temps réel)
@@ -242,6 +248,16 @@ function tick() {
   }
   if (emu) sendFrames();
   if (tcps.size) pollTcp();
+  if (video && performance.now() - videoTime >= VIDEO_MS) {
+    videoTime = performance.now();
+    const frame = emu.video_take();
+    if (frame.length > 4) {
+      const head = new DataView(frame.buffer, frame.byteOffset, 4);
+      const pixels = frame.slice(4);
+      post({ type: 'video', y: head.getUint16(0, true), h: head.getUint16(2, true), pixels }, [pixels.buffer]);
+    }
+    if (emu.video_bell()) post({ type: 'bell' });
+  }
   const out = emu.take_output();
   if (out.length) post({ type: 'output', bytes: out }, [out.buffer]);
 
@@ -291,6 +307,9 @@ self.onmessage = async (e) => {
         if (emu) emu.free();
         closeDisks();
         emu = new Emulator(msg.mem);
+        emu.set_qvss(!!msg.qvss);
+        video = !!msg.qvss;
+        videoTime = 0;
         tcps.clear();
         for (const d of msg.disks ?? []) {
           try {
@@ -336,6 +355,12 @@ self.onmessage = async (e) => {
         break;
       case 'speed':
         emu?.set_speed(msg.factor);
+        break;
+      case 'vkey':
+        emu?.video_key(msg.code, msg.state);
+        break;
+      case 'vmouse':
+        emu?.video_mouse(msg.x, msg.y, msg.buttons);
         break;
       case 'tcpOpen':
         if (emu) {

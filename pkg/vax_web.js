@@ -235,6 +235,14 @@ export class Emulator {
         wasm.emulator_send_break(this.__wbg_ptr);
     }
     /**
+     * Avant `power_up` : installe la carte graphique QVSS avec clavier et souris (la
+     * machine devient une VAXstation 3900; OpenVMS y affiche DECwindows).
+     * @param {boolean} on
+     */
+    set_qvss(on) {
+        wasm.emulator_set_qvss(this.__wbg_ptr, on);
+    }
+    /**
      * Branche une image sur le lecteur MSCP `unit` (DUA0-DUA3), type `drive` (RA82, RRD40...).
      * Vitesse du processeur : `factor` fois la vitesse normale (100 ns par instruction hors
      * du ROM, soit 10 MIPS). L'horloge de VMS reste à l'heure; seul le nombre
@@ -298,6 +306,49 @@ export class Emulator {
      */
     use_bridge() {
         wasm.emulator_use_bridge(this.__wbg_ptr);
+    }
+    /**
+     * La cloche du clavier a sonné depuis le dernier appel.
+     * @returns {boolean}
+     */
+    video_bell() {
+        const ret = wasm.emulator_video_bell(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * Touche du clavier graphique (`KeyboardEvent.code`); `state` : 0 enfoncée, 1 relâchée,
+     * 2 répétée. Faux si le clavier du VAX n'a pas cette touche.
+     * @param {string} code
+     * @param {number} state
+     * @returns {boolean}
+     */
+    video_key(code, state) {
+        const ptr0 = passStringToWasm0(code, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.emulator_video_key(this.__wbg_ptr, ptr0, len0, state);
+        return ret !== 0;
+    }
+    /**
+     * Souris : position voulue du pointeur sur l'écran (0..1023, 0..863) et boutons
+     * (bit 0 gauche, bit 1 milieu, bit 2 droit).
+     * @param {number} x
+     * @param {number} y
+     * @param {number} buttons
+     */
+    video_mouse(x, y, buttons) {
+        wasm.emulator_video_mouse(this.__wbg_ptr, x, y, buttons);
+    }
+    /**
+     * Lignes de l'écran graphique changées depuis le dernier appel : deux mots de 16 bits
+     * (première ligne, nombre de lignes) puis les points en RGBA, 1024 par ligne. Vide si
+     * rien n'a changé (ou sans carte graphique).
+     * @returns {Uint8Array}
+     */
+    video_take() {
+        const ret = wasm.emulator_video_take(this.__wbg_ptr);
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
     }
 }
 if (Symbol.dispose) Emulator.prototype[Symbol.dispose] = Emulator.prototype.free;
@@ -620,18 +671,18 @@ function __wbg_get_imports() {
         __wbg___wbindgen_throw_41e9ee4f547fc59a: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
-        __wbg_flush_2b0ebb61dd867c24: function(arg0) {
+        __wbg_flush_7ddc111e15825deb: function(arg0) {
             arg0.flush();
         },
-        __wbg_read_a5632158aaca73d8: function(arg0, arg1, arg2, arg3) {
+        __wbg_read_9628dc460e29c2cf: function(arg0, arg1, arg2, arg3) {
             const ret = arg0.read(arg1, getArrayU8FromWasm0(arg2, arg3));
             return ret;
         },
-        __wbg_size_1f973a2c88154a1e: function(arg0) {
+        __wbg_size_5a95c47a097316c2: function(arg0) {
             const ret = arg0.size();
             return ret;
         },
-        __wbg_write_94a7184f2b333c07: function(arg0, arg1, arg2, arg3) {
+        __wbg_write_113f57ddbf9b461b: function(arg0, arg1, arg2, arg3) {
             const ret = arg0.write(arg1, getArrayU8FromWasm0(arg2, arg3));
             return ret;
         },

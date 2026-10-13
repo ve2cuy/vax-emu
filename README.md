@@ -192,6 +192,24 @@ To install OpenVMS VAX (power the VAX off to change the disks):
 
 OpenVMS passwords may only contain letters, digits, `$` and `_`.
 
+## Graphics screen and DECwindows
+
+The **VAXstation 3900** model (Machine section) adds a 1024 × 864 monochrome QVSS
+graphics card, an LK201 keyboard and a mouse to the machine. A **Screen** tab then
+appears next to Console and Telnet: OpenVMS shows DECwindows Motif there.
+
+- The console (the ROM, booting, `OPA0`) stays in the Console tab: on this model only
+  DECwindows uses the graphics screen.
+- Click in the screen to type. The VAX pointer follows the page's pointer; the three
+  mouse buttons are passed on.
+- Keys: F1 to F12, the arrows, Insert, Delete, Home, End and Page Up/Down are the LK201
+  editing keys; Alt is Compose; Escape stands for F11.
+- OpenVMS must be installed with DECwindows support (base and workstation) and the
+  DECwindows Motif product, both on the OpenVMS VAX 7.1 CD.
+- **Licenses**: without a registered VAX-VMS license, DECwindows does not start by itself
+  at boot (start it with `@SYS$MANAGER:DECW$STARTUP`), and without a DW-MOTIF license the
+  session is refused after login. Register your licenses with `@SYS$UPDATE:VMSLICENSE`.
+
 ## File manager
 
 The folder icon in the toolbar (or the **Files** button of a drive, Disks section) opens

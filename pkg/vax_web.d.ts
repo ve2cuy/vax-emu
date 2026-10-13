@@ -91,6 +91,11 @@ export class Emulator {
      */
     send_break(): void;
     /**
+     * Avant `power_up` : installe la carte graphique QVSS avec clavier et souris (la
+     * machine devient une VAXstation 3900; OpenVMS y affiche DECwindows).
+     */
+    set_qvss(on: boolean): void;
+    /**
      * Branche une image sur le lecteur MSCP `unit` (DUA0-DUA3), type `drive` (RA82, RRD40...).
      * Vitesse du processeur : `factor` fois la vitesse normale (100 ns par instruction hors
      * du ROM, soit 10 MIPS). L'horloge de VMS reste à l'heure; seul le nombre
@@ -120,6 +125,26 @@ export class Emulator {
      * au lieu du réseau virtuel.
      */
     use_bridge(): void;
+    /**
+     * La cloche du clavier a sonné depuis le dernier appel.
+     */
+    video_bell(): boolean;
+    /**
+     * Touche du clavier graphique (`KeyboardEvent.code`); `state` : 0 enfoncée, 1 relâchée,
+     * 2 répétée. Faux si le clavier du VAX n'a pas cette touche.
+     */
+    video_key(code: string, state: number): boolean;
+    /**
+     * Souris : position voulue du pointeur sur l'écran (0..1023, 0..863) et boutons
+     * (bit 0 gauche, bit 1 milieu, bit 2 droit).
+     */
+    video_mouse(x: number, y: number, buttons: number): void;
+    /**
+     * Lignes de l'écran graphique changées depuis le dernier appel : deux mots de 16 bits
+     * (première ligne, nombre de lignes) puis les points en RGBA, 1024 par ligne. Vide si
+     * rien n'a changé (ou sans carte graphique).
+     */
+    video_take(): Uint8Array;
 }
 
 export class Ods2 {
@@ -205,6 +230,7 @@ export interface InitOutput {
     readonly emulator_power_up: (a: number) => void;
     readonly emulator_run: (a: number, b: number, c: number) => number;
     readonly emulator_send_break: (a: number) => void;
+    readonly emulator_set_qvss: (a: number, b: number) => void;
     readonly emulator_set_speed: (a: number, b: number) => void;
     readonly emulator_set_time: (a: number, b: number, c: number) => void;
     readonly emulator_stop_reason: (a: number) => [number, number];
@@ -212,6 +238,10 @@ export interface InitOutput {
     readonly emulator_take_output: (a: number) => [number, number];
     readonly emulator_type_bytes: (a: number, b: number, c: number) => void;
     readonly emulator_use_bridge: (a: number) => void;
+    readonly emulator_video_bell: (a: number) => number;
+    readonly emulator_video_key: (a: number, b: number, c: number, d: number) => number;
+    readonly emulator_video_mouse: (a: number, b: number, c: number, d: number) => void;
+    readonly emulator_video_take: (a: number) => [number, number];
     readonly ods2_copy: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number];
     readonly ods2_create: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number];
     readonly ods2_info: (a: number) => [number, number, number, number];
