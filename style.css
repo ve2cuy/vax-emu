@@ -1203,7 +1203,7 @@ button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--error)
 .terminal .xterm .xterm-viewport { scrollbar-width: thin; scrollbar-color: #666 #000; }
 /* Écran graphique de la VAXstation (QVSS, 1024 × 864) : réduit à la largeur disponible. */
 .vax-screen { display: block; width: min(1024px, 100%); height: auto; aspect-ratio: 1024 / 864; border-radius: 6px; background: #000;
-  outline: none; cursor: crosshair; touch-action: none; }
+  outline: none; cursor: none; touch-action: none; }
 .vax-screen[hidden] { display: none; }
 .vax-screen:focus { box-shadow: 0 0 0 2px var(--accent); }
 .terminal .xterm:focus-within { box-shadow: 0 0 0 2px var(--accent); border-radius: 4px; }
