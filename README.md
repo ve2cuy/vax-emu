@@ -53,7 +53,9 @@ The **Install** menu automates the long parts:
   the CD, restores the system to the disk and starts the installation procedure; you then
   answer its questions (options, passwords, node name, time zone).
 - **Install TCP/IP** installs CMU-OpenVMS/IP on the OpenVMS system in DUA0 (you give the
-  SYSTEM password): telnet and FTP, address 10.0.2.15, started with the system.
+  SYSTEM password): telnet and FTP, address 10.0.2.15, started with the system. It also
+  installs the `NETCONFIG` command, which changes the address, mask, gateway and DNS
+  servers interactively (in English or French), restarts the network and tests it.
 
 ## Network
 

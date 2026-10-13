@@ -57,6 +57,9 @@ Le menu **Installation** automatise les longues étapes :
   nœud, fuseau horaire).
 - **Installer TCP/IP** installe CMU-OpenVMS/IP sur le système OpenVMS de DUA0 (vous donnez
   le mot de passe de SYSTEM) : telnet et FTP, adresse 10.0.2.15, démarré avec le système.
+  Il installe aussi la commande `NETCONFIG`, qui change l'adresse, le masque, la
+  passerelle et les serveurs DNS de façon interactive (en français ou en anglais),
+  redémarre le réseau et le teste.
 
 ## Réseau (menu)
 

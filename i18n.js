@@ -12,6 +12,8 @@ const XTERM = '<a href="https://xtermjs.org/" target="_blank" rel="noopener">xte
 
 const STRINGS = {
   en: {
+    "auto.step.netconfig": "NETCONFIG command (network settings)…",
+    "auto.tcp.done": "TCP/IP is installed and running (10.0.2.15); it starts with the system. To change the address, gateway or DNS: NETCONFIG.",
     "disk.missing": "{name} — image gone from this browser",
     "disk.lost": "The image of {unit} ({name}) is no longer in this browser: its storage was erased. The drive stays empty; import the image again or eject it.",
     "disk.persisted": "Persistent storage: the browser keeps it.",
@@ -72,7 +74,6 @@ const STRINGS = {
     "auto.tcp.password": "Password of the SYSTEM account of the OpenVMS system in DUA0:",
     "auto.tcp.noSystem": "Put an installed OpenVMS VAX V7.1 system disk in DUA0 first.",
     "auto.tcp.badPassword": "login refused (wrong SYSTEM password)",
-    "auto.tcp.done": "TCP/IP is installed and running (10.0.2.15); it starts with the system.",
     "auto.stop": "Stop",
     "auto.running": "{name}: {step}",
     "auto.cancelled": "stopped",
@@ -194,6 +195,8 @@ const STRINGS = {
     'error': 'Error: {msg}',
   },
   fr: {
+    "auto.step.netconfig": "commande NETCONFIG (réglages du réseau)…",
+    "auto.tcp.done": "TCP/IP est installé et en marche (10.0.2.15); il démarre avec le système. Pour changer l’adresse, la passerelle ou le DNS : NETCONFIG.",
     "disk.missing": "{name} — image disparue de ce fureteur",
     "disk.lost": "L’image de {unit} ({name}) n’est plus dans ce fureteur : son stockage a été effacé. Le lecteur reste vide; importez l’image de nouveau ou éjectez-la.",
     "disk.persisted": "Stockage persistant : le fureteur le garde.",
@@ -254,7 +257,6 @@ const STRINGS = {
     "auto.tcp.password": "Mot de passe du compte SYSTEM du système OpenVMS de DUA0 :",
     "auto.tcp.noSystem": "Mettez d’abord un disque système OpenVMS VAX V7.1 installé dans DUA0.",
     "auto.tcp.badPassword": "connexion refusée (mauvais mot de passe de SYSTEM)",
-    "auto.tcp.done": "TCP/IP est installé et en marche (10.0.2.15); il démarre avec le système.",
     "auto.stop": "Arrêter",
     "auto.running": "{name} : {step}",
     "auto.cancelled": "arrêtée",
@@ -376,6 +378,8 @@ const STRINGS = {
     'error': 'Erreur : {msg}',
   },
   es: {
+    "auto.step.netconfig": "comando NETCONFIG (ajustes de red)…",
+    "auto.tcp.done": "TCP/IP está instalado y en marcha (10.0.2.15); se inicia con el sistema. Para cambiar la dirección, la pasarela o el DNS: NETCONFIG.",
     "disk.missing": "{name} — imagen desaparecida de este navegador",
     "disk.lost": "La imagen de {unit} ({name}) ya no está en este navegador: su almacenamiento fue borrado. La unidad queda vacía; importe la imagen de nuevo o expúlsela.",
     "disk.persisted": "Almacenamiento persistente: el navegador lo conserva.",
@@ -436,7 +440,6 @@ const STRINGS = {
     "auto.tcp.password": "Contraseña de la cuenta SYSTEM del sistema OpenVMS de DUA0:",
     "auto.tcp.noSystem": "Ponga primero un disco de sistema OpenVMS VAX V7.1 instalado en DUA0.",
     "auto.tcp.badPassword": "inicio de sesión rechazado (contraseña de SYSTEM incorrecta)",
-    "auto.tcp.done": "TCP/IP está instalado y en marcha (10.0.2.15); se inicia con el sistema.",
     "auto.stop": "Detener",
     "auto.running": "{name}: {step}",
     "auto.cancelled": "detenida",
@@ -558,6 +561,8 @@ const STRINGS = {
     'error': 'Error: {msg}',
   },
   zh: {
+    "auto.step.netconfig": "NETCONFIG 命令（网络设置）…",
+    "auto.tcp.done": "TCP/IP 已安装并运行（10.0.2.15）；它随系统启动。要更改地址、网关或 DNS：NETCONFIG。",
     "disk.missing": "{name} — 映像已从此浏览器中消失",
     "disk.lost": "{unit} 的映像（{name}）已不在此浏览器中：其存储已被清除。驱动器保持为空；请重新导入映像或将其弹出。",
     "disk.persisted": "持久存储：浏览器会保留它。",
@@ -618,7 +623,6 @@ const STRINGS = {
     "auto.tcp.password": "DUA0 上 OpenVMS 系统的 SYSTEM 账户密码：",
     "auto.tcp.noSystem": "请先在 DUA0 放入已安装的 OpenVMS VAX V7.1 系统盘。",
     "auto.tcp.badPassword": "登录被拒绝（SYSTEM 密码错误）",
-    "auto.tcp.done": "TCP/IP 已安装并运行（10.0.2.15）；它随系统启动。",
     "auto.stop": "停止",
     "auto.running": "{name}：{step}",
     "auto.cancelled": "已停止",

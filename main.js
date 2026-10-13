@@ -6,7 +6,7 @@
 
 import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js';
 
-const VERSION = '0.2.2';
+const VERSION = '0.2.3';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -1525,6 +1525,16 @@ async function installTcpip() {
     await cmd('RENAME IPACP.EXE IPACP.EXE_V665');
     await cmd('RENAME FTP_SERVER.EXE FTP_SERVER.EXE_V665');
     await cmd('COPY SYS$SYSDEVICE:[CMUIP066.P665K]IPACP.EXE,FTP_SERVER.EXE []');
+    P.step('auto.step.netconfig');
+    await cmd("COPY SYS$SYSDEVICE:[CMUIP066]NETCONFI.COM SYS$COMMON:[SYSMGR]NETCONFIG.COM");
+    await cmd("SET FILE/ATTRIBUTES=(RFM:STMLF,RAT:CR) SYS$COMMON:[SYSMGR]NETCONFIG.COM");
+    await cmd("PURGE SYS$COMMON:[SYSMGR]NETCONFIG.COM");
+    await cmd("SET PROTECTION=(S:RWED,O:RWED,G:RE,W:RE) SYS$COMMON:[SYSMGR]NETCONFIG.COM");
+    await cmd("SEARCH/NOOUTPUT SYS$MANAGER:SYLOGIN.COM \"NETCONFIG :==\"");
+    await cmd("IF $STATUS .NE. 1 THEN OPEN/APPEND F SYS$MANAGER:SYLOGIN.COM");
+    await cmd("IF F$TRNLNM(\"F\") .NES. \"\" THEN WRITE F \"$ NETCONFIG :== @SYS$MANAGER:NETCONFIG\"");
+    await cmd("IF F$TRNLNM(\"F\") .NES. \"\" THEN CLOSE F");
+    await cmd("NETCONFIG :== @SYS$MANAGER:NETCONFIG");
     P.step('auto.step.startup');
     await cmd('SET DEFAULT SYS$LOGIN');
     P.send('CREATE ADDIP.COM\r');

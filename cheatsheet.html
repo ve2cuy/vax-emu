@@ -233,7 +233,7 @@ SYSTEM SHUTDOWN COMPLETE      ! alors seulement : bouton Arrêt (&gt;&gt;&gt;) o
   </div>
 
   <h3>Changer l'adresse, la passerelle, le DNS ou le nom</h3>
-  <p>Si la commande <code>NETCONFIG</code> est installée sur votre disque (« Net Config by VE2CUY », procédure <code>SYS$MANAGER:NETCONFIG.COM</code>), elle fait tout ce qui suit : elle demande l'adresse, le masque, la passerelle et les serveurs DNS, valide les réponses, redémarre le réseau, puis teste la passerelle et le DNS par un ping. À la main :</p>
+  <p>La commande <code>NETCONFIG</code> (« Net Config by VE2CUY ») fait tout ce qui suit : elle demande l'adresse, le masque, la passerelle et les serveurs DNS, valide les réponses, redémarre le réseau, puis teste la passerelle et le DNS par un ping. Elle demande la langue au lancement; <code>NETCONFIG F</code> la lance en français, <code>NETCONFIG E</code> en anglais. Elle est installée par le bouton « Installer TCP/IP » et se trouve sur le disque OpenVMS + TCP/IP du dépôt. À la main :</p>
   <p>Modifiez <code>CMUIP_ROOT:[SYSMGR]INTERNET.CONFIG</code> avec <code>EDIT/TPU CMUIP_ROOT:[SYSMGR]INTERNET.CONFIG</code> (<kbd>Ctrl+Z</kbd> enregistre). C'est ce fichier que lit IPACP. N'écrivez pas plutôt dans <code>SYS$MANAGER:</code> : un nouveau fichier y irait dans <code>SYS$SPECIFIC</code> et IPACP ne le verrait pas.</p>
 <pre>! Adresse et masque (carte XQA0) :
 Device_Init:XEDRV:XQA0:00-00-00-00-00-00:192.168.2.77:255.255.255.0
@@ -445,7 +445,7 @@ SYSTEM SHUTDOWN COMPLETE      ! only then: Halt button (&gt;&gt;&gt;) or Power o
   </div>
 
   <h3>Changing the address, gateway, DNS or name</h3>
-  <p>If the <code>NETCONFIG</code> command is installed on your disk ("Net Config by VE2CUY", procedure <code>SYS$MANAGER:NETCONFIG.COM</code>), it does all of the following: it asks for the address, mask, gateway and DNS servers, validates the answers, restarts the network, then tests the gateway and the DNS with a ping. By hand:</p>
+  <p>The <code>NETCONFIG</code> command ("Net Config by VE2CUY") does all of the following: it asks for the address, mask, gateway and DNS servers, validates the answers, restarts the network, then tests the gateway and the DNS with a ping. It asks for the language when it starts; <code>NETCONFIG E</code> runs it in English, <code>NETCONFIG F</code> in French. It is installed by the Install TCP/IP button and is on the repository's OpenVMS + TCP/IP disk. By hand:</p>
   <p>Edit <code>CMUIP_ROOT:[SYSMGR]INTERNET.CONFIG</code> with <code>EDIT/TPU CMUIP_ROOT:[SYSMGR]INTERNET.CONFIG</code> (<kbd>Ctrl+Z</kbd> saves). This is the file IPACP reads. Do not write to <code>SYS$MANAGER:</code> instead: a new file would go to <code>SYS$SPECIFIC</code>, which IPACP never sees.</p>
 <pre>! Address and mask (card XQA0):
 Device_Init:XEDRV:XQA0:00-00-00-00-00-00:192.168.2.77:255.255.255.0
