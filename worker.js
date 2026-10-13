@@ -22,7 +22,8 @@
 // Disques : fichiers de l'OPFS (dossier « disks »), ouverts en accès synchrone et branchés
 // sur les lecteurs MSCP (disks : [{unit, drive, file}]).
 
-import init, { Emulator } from './pkg/vax_web.js';
+import init, { Emulator, Ods2 } from './pkg/vax_web.js';
+import { fsRun, fsError } from './fs-ops.js';
 
 const version = new URL(import.meta.url).search; // ?v=… transmis par la page
 let ready = null;
@@ -35,6 +36,7 @@ let statTime = 0;
 let nvrTime = 0;
 let lastNvr = null;
 let handles = new Map();   // lecteur -> accès synchrone OPFS ouvert (fermés à l'arrêt)
+let diskObjs = new Map();  // lecteur -> image présentée à la machine (gestionnaire de fichiers)
 let bridgeUrl = null;
 let turbo = false;
 let tcpId = 0;           // connexion telnet de la page (0 : aucune)
@@ -55,7 +57,7 @@ async function openDisk(file, unit) {
   const fh = await dir.getFileHandle(file);
   const h = await fh.createSyncAccessHandle();
   handles.set(unit, h);
-  return {
+  const disk = {
     read(off, buf) {
       try {
         buf.fill(0);
@@ -80,6 +82,8 @@ async function openDisk(file, unit) {
       try { h.flush(); } catch { /* rien */ }
     },
   };
+  diskObjs.set(unit, disk);
+  return disk;
 }
 
 /** Branche le WebSocket du relais; nouvel essai toutes les 5 s s'il se ferme. */
@@ -148,6 +152,7 @@ function closeHandle(h) {
 function closeDisks() {
   for (const h of handles.values()) closeHandle(h);
   handles.clear();
+  diskObjs.clear();
 }
 
 const SLICE_MS = 12; // temps de calcul au plus, par tour
@@ -360,9 +365,24 @@ self.onmessage = async (e) => {
           const old = handles.get(msg.unit);
           if (old) closeHandle(old);
           handles.delete(msg.unit);
+          diskObjs.delete(msg.unit);
           if (msg.file) emu.attach_disk(msg.unit, msg.drive, await openDisk(msg.file, msg.unit));
         }
         post({ type: 'swapped', unit: msg.unit });
+        break;
+      }
+      case 'fs': {
+        // Gestionnaire de fichiers, machine en marche : lecture seule, par l'image que
+        // la machine tient ouverte (ce que VMS n'a pas encore écrit n'y est pas).
+        try {
+          const disk = diskObjs.get(msg.unit);
+          if (!disk) throw new Error('fs.noDisk|');
+          emu?.flush_disks();
+          const result = fsRun(Ods2, disk, msg.op, msg.args, true);
+          post({ type: 'fs', id: msg.id, ok: true, result }, result instanceof Uint8Array ? [result.buffer] : []);
+        } catch (err) {
+          post({ type: 'fs', id: msg.id, ok: false, error: fsError(err) });
+        }
         break;
       }
       case 'break':

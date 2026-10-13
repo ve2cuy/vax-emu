@@ -748,6 +748,53 @@ button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--error)
 .dialog .hint { margin: 4px 0 10px; }
 .dialog .field { margin-bottom: 10px; }
 .dialog .warning { color: var(--error); font-size: 0.88rem; margin: 6px 0; }
+/* Gestionnaire de fichiers (volumes ODS-2) */
+.dialog.files { width: min(1040px, 96vw); height: min(780px, 92vh); max-height: 92vh; padding: 14px 16px; }
+.dialog.files[open] { display: flex; flex-direction: column; }
+.dialog.files-small { width: min(520px, 94vw); }
+.files-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.files-head h2 { margin: 0; }
+.files-head select { width: auto; max-width: 16em; }
+.files-head .spacer { flex: 1; }
+#files-browse, #files-editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+#files-browse[hidden], #files-editor[hidden] { display: none; }
+.files-path { margin: 8px 0 6px; font-size: 0.92rem; overflow-wrap: anywhere; }
+.files-path code { margin-left: 8px; color: var(--muted); font: 0.84rem ui-monospace, Consolas, monospace; }
+.files-path .crumb { padding: 2px 6px; border: 0; border-radius: 6px; background: none; color: var(--accent-ink); font: inherit; cursor: pointer; }
+.files-path .crumb:hover { background: var(--accent-soft); }
+.files-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.files-tools button { padding: 5px 9px; font-size: 0.85rem; }
+.files-tools button:disabled { opacity: 0.45; cursor: default; }
+.files-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 8px 0; }
+.files-filter input[type=search] { width: 14em; max-width: 100%; }
+.files-filter label.check { margin-top: 0; }
+.files-list { flex: 1; min-height: 8rem; max-height: none; }
+.files-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.files-table th { position: sticky; top: 0; z-index: 1; padding: 6px 8px; background: var(--surface-2); color: var(--muted); font-weight: 600; text-align: left; white-space: nowrap; }
+.files-table td { padding: 3px 8px; border-top: 1px solid var(--border); white-space: nowrap; }
+.files-table td.num, .files-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.files-table td.prot, .files-table td.owner, .files-table td.date { font: 0.82rem ui-monospace, Consolas, monospace; }
+.files-table tr.selected td { background: var(--accent-soft); }
+.files-table .file-name { display: inline-flex; align-items: center; gap: 6px; padding: 2px 4px; border: 0; background: none; color: var(--text); font: 0.86rem ui-monospace, Consolas, monospace; cursor: pointer; }
+.files-table .file-name:hover { color: var(--accent-ink); text-decoration: underline; }
+.files-table .file-name .icon { width: 15px; height: 15px; }
+.files-table .badge { margin-left: 6px; padding: 1px 6px; border-radius: 8px; background: var(--surface-2); color: var(--muted); font-size: 0.74rem; }
+#files-empty { padding: 14px; }
+.files-text { flex: 1; min-height: 10rem; width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: #000; color: #d8d8d8; font: 0.86rem/1.35 "DejaVu Sans Mono", "Cascadia Mono", Consolas, monospace; resize: none; white-space: pre; tab-size: 8; }
+.files-status { min-height: 1.3em; margin: 8px 0 0; }
+.files-status.error { color: var(--error); }
+.props-facts { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 6px 0 10px; font-size: 0.86rem; }
+.props-facts dt { color: var(--muted); }
+.props-facts dd { margin: 0; overflow-wrap: anywhere; }
+.prot-table { border-collapse: collapse; font-size: 0.86rem; }
+.prot-table th, .prot-table td { padding: 3px 12px 3px 0; text-align: center; font-weight: 500; }
+.prot-table tbody th { text-align: left; }
+.props-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.props-row .field { flex: 0 1 auto; }
+.props-row input, .props-row select { width: 8em; }
+.files-small input[type=text] { width: 100%; }
+
 .dialog-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
 .dialog-actions .spacer { flex: 1; }
 .dialog-actions select { width: auto; }

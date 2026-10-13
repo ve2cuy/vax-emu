@@ -205,6 +205,28 @@ Pour installer OpenVMS VAX (éteignez le VAX pour changer les disques) :
 
 Les mots de passe d'OpenVMS ne peuvent contenir que des lettres, des chiffres, `$` et `_`.
 
+## Gestionnaire de fichiers
+
+L'icône du dossier, dans la barre du haut (ou le bouton **Fichiers** d'un lecteur, section
+Disques), ouvre les fichiers d'un disque OpenVMS sans passer par OpenVMS : la page lit
+elle-même le format du volume (Files-11 ODS-2) dans l'image.
+
+- **Lister et naviguer** : répertoires, filtre par nom, toutes les versions ou la dernière,
+  taille, date, propriétaire, protection.
+- **Ouvrir** : un fichier texte s'édite dans la page (l'enregistrement crée une nouvelle
+  version, comme sous VMS); un autre fichier montre ses premiers octets.
+- **Importer et exporter** des fichiers entre votre appareil et le disque (un texte devient
+  un fichier à enregistrements de longueur variable, le reste des blocs de 512 octets).
+- **Copier, couper, coller, renommer, effacer, purger**, créer un répertoire ou un fichier.
+- **Propriétés** : protection (système, propriétaire, groupe, monde), propriétaire (UIC),
+  limite de versions, format d'enregistrement.
+
+Les modifications ne sont permises que **VAX éteint** (après un `SHUTDOWN`) : un disque
+qu'OpenVMS a monté est gardé en partie en mémoire, et VMS réécrirait par-dessus. VAX en
+marche, le gestionnaire reste ouvert en lecture seule. Chaque opération d'écriture a été
+vérifiée par `ANALYZE/DISK_STRUCTURE` d'OpenVMS; gardez tout de même une copie d'un disque
+auquel vous tenez (bouton de téléchargement du lecteur) avant de le modifier.
+
 ## Réseau
 
 Le VAX a un contrôleur Ethernet DELQA (`XQA0`, adresse de station 08-00-2B-AA-BB-CC) sur

@@ -192,6 +192,28 @@ To install OpenVMS VAX (power the VAX off to change the disks):
 
 OpenVMS passwords may only contain letters, digits, `$` and `_`.
 
+## File manager
+
+The folder icon in the toolbar (or the **Files** button of a drive, Disks section) opens
+the files of an OpenVMS disk without going through OpenVMS: the page reads the volume
+format (Files-11 ODS-2) in the image itself.
+
+- **List and browse**: directories, filter by name, all versions or the latest, size,
+  date, owner, protection.
+- **Open**: a text file is edited in the page (saving creates a new version, as under
+  VMS); any other file shows its first bytes.
+- **Import and export** files between your device and the disk (a text becomes a
+  variable-length record file, anything else 512-byte blocks).
+- **Copy, cut, paste, rename, delete, purge**, create a directory or a file.
+- **Properties**: protection (system, owner, group, world), owner (UIC), version limit,
+  record format.
+
+Changes are only allowed with the **VAX powered off** (after a `SHUTDOWN`): OpenVMS keeps
+part of a mounted disk in memory and would write over them. While the VAX runs, the file
+manager stays open read-only. Every write operation was checked with OpenVMS's
+`ANALYZE/DISK_STRUCTURE`; still, keep a copy of a disk you care about (the drive's
+download button) before changing it.
+
 ## Network
 
 The VAX has a DELQA Ethernet controller (`XQA0`, station address 08-00-2B-AA-BB-CC) on

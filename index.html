@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=f6e65f99">
-  <link rel="stylesheet" href="style.css?v=f6e65f99">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=0583ea9d">
+  <link rel="stylesheet" href="style.css?v=0583ea9d">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -51,6 +51,14 @@
       <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
       <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></symbol>
       <symbol id="i-eject" viewBox="0 0 24 24"><path d="M12 5l7 8H5zM5 18h14"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v4h4"/></symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></symbol>
+      <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></symbol>
+      <symbol id="i-cut" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8 16L18 4M16 16L6 4"/></symbol>
+      <symbol id="i-rename" viewBox="0 0 24 24"><path d="M4 7h9M4 17h9M16 4v16M13 4h6M13 20h6"/></symbol>
+      <symbol id="i-purge" viewBox="0 0 24 24"><path d="M4 6h16M7 6l1 14h8l1-14M10 10v6M14 10v6"/></symbol>
       <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
       <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
       <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M8 7h7M8 11h5"/></symbol>
@@ -304,6 +312,10 @@
                   aria-label="Copy" data-i18n-aria="clip.copy">
             <svg class="icon"><use href="#i-copy"/></svg>
           </button>
+          <button id="files-button" type="button" class="icon-button" title="Files on the disks" data-i18n-title="fs.button"
+                  aria-label="Files on the disks" data-i18n-aria="fs.button">
+            <svg class="icon"><use href="#i-folder"/></svg>
+          </button>
           <a id="cheatsheet" class="icon-button" href="cheatsheet.html" target="_blank" rel="noopener"
              title="OpenVMS cheat sheet" data-i18n-title="cheatsheet" aria-label="OpenVMS cheat sheet" data-i18n-aria="cheatsheet">
             <svg class="icon"><use href="#i-book"/></svg>
@@ -365,7 +377,122 @@
       </div>
     </main>
   </div>
-  <script src="vendor/xterm/xterm.js?v=f6e65f99"></script>
-  <script type="module" src="main.js?v=f6e65f99"></script>
+  <!-- Gestionnaire de fichiers des volumes ODS-2 (files.js) -->
+  <dialog id="files" class="dialog files">
+    <div class="files-head">
+      <h2 id="files-title">Files</h2>
+      <select id="files-unit" aria-label="Drive" data-i18n-aria="fs.unit"></select>
+      <span id="files-space" class="hint"></span>
+      <span class="spacer"></span>
+      <button id="files-close" type="button" class="icon-button" title="Close" data-i18n-title="fs.close" aria-label="Close" data-i18n-aria="fs.close">
+        <svg class="icon"><use href="#i-x"/></svg></button>
+    </div>
+    <p id="files-notice" class="warning" hidden></p>
+    <div id="files-browse">
+      <div id="files-path" class="files-path"></div>
+      <div class="files-tools">
+          <button id="files-up" type="button" class="secondary with-icon" title="Up" data-i18n-title="fs.up.tip"><svg class="icon"><use href="#i-up"/></svg><span data-i18n="fs.up">Up</span></button>
+          <button id="files-refresh" type="button" class="secondary with-icon" title="Refresh" data-i18n-title="fs.refresh.tip"><svg class="icon"><use href="#i-refresh"/></svg><span data-i18n="fs.refresh">Refresh</span></button>
+          <span class="toolbar-sep" aria-hidden="true"></span>
+          <button id="files-mkdir" type="button" class="secondary with-icon" title="New directory" data-i18n-title="fs.mkdir.tip"><svg class="icon"><use href="#i-folder"/></svg><span data-i18n="fs.mkdir">New directory</span></button>
+          <button id="files-new" type="button" class="secondary with-icon" title="New file" data-i18n-title="fs.new.tip"><svg class="icon"><use href="#i-file"/></svg><span data-i18n="fs.new">New file</span></button>
+          <button id="files-import" type="button" class="secondary with-icon" title="Import" data-i18n-title="fs.import.tip"><svg class="icon"><use href="#i-upload"/></svg><span data-i18n="fs.import">Import</span></button>
+          <span class="toolbar-sep" aria-hidden="true"></span>
+          <button id="files-open" type="button" class="secondary with-icon" title="Open" data-i18n-title="fs.open.tip"><svg class="icon"><use href="#i-edit"/></svg><span data-i18n="fs.open">Open</span></button>
+          <button id="files-export" type="button" class="secondary with-icon" title="Export" data-i18n-title="fs.export.tip"><svg class="icon"><use href="#i-download"/></svg><span data-i18n="fs.export">Export</span></button>
+          <button id="files-copy" type="button" class="secondary with-icon" title="Copy" data-i18n-title="fs.copy.tip"><svg class="icon"><use href="#i-copy"/></svg><span data-i18n="fs.copy">Copy</span></button>
+          <button id="files-cut" type="button" class="secondary with-icon" title="Cut" data-i18n-title="fs.cut.tip"><svg class="icon"><use href="#i-cut"/></svg><span data-i18n="fs.cut">Cut</span></button>
+          <button id="files-paste" type="button" class="secondary with-icon" title="Paste" data-i18n-title="fs.paste.tip"><svg class="icon"><use href="#i-paste"/></svg><span data-i18n="fs.paste">Paste</span></button>
+          <button id="files-rename" type="button" class="secondary with-icon" title="Rename" data-i18n-title="fs.rename.tip"><svg class="icon"><use href="#i-rename"/></svg><span data-i18n="fs.rename">Rename</span></button>
+          <button id="files-delete" type="button" class="secondary with-icon" title="Delete" data-i18n-title="fs.delete.tip"><svg class="icon"><use href="#i-trash"/></svg><span data-i18n="fs.delete">Delete</span></button>
+          <button id="files-purge" type="button" class="secondary with-icon" title="Purge" data-i18n-title="fs.purge.tip"><svg class="icon"><use href="#i-purge"/></svg><span data-i18n="fs.purge">Purge</span></button>
+          <button id="files-props" type="button" class="secondary with-icon" title="Properties" data-i18n-title="fs.props.tip"><svg class="icon"><use href="#i-info"/></svg><span data-i18n="fs.props">Properties</span></button>
+      </div>
+      <div class="files-filter">
+        <input id="files-filter" type="search" placeholder="Filter" aria-label="Filter by name" data-i18n-aria="fs.filter" autocomplete="off" spellcheck="false">
+        <label class="check"><input id="files-versions" type="checkbox"> <span data-i18n="fs.allVersions">All versions</span></label>
+        <span id="files-count" class="hint"></span>
+        <input id="files-input" type="file" multiple hidden>
+      </div>
+      <div class="files-scroll files-list">
+        <table class="files-table">
+          <thead><tr>
+            <th><input id="files-all" type="checkbox" aria-label="Select all" data-i18n-aria="fs.selectAll"></th>
+            <th data-i18n="fs.col.name">Name</th><th class="num" data-i18n="fs.col.size">Blocks</th>
+            <th data-i18n="fs.col.date">Modified</th><th data-i18n="fs.col.owner">Owner</th><th data-i18n="fs.col.prot">Protection (S,O,G,W)</th>
+          </tr></thead>
+          <tbody id="files-rows"></tbody>
+        </table>
+        <p id="files-empty" class="hint" data-i18n="fs.empty" hidden>Empty directory.</p>
+      </div>
+    </div>
+    <div id="files-editor" hidden>
+      <div class="files-path"><code id="files-editor-name"></code></div>
+      <p id="files-editor-info" class="hint"></p>
+      <textarea id="files-text" class="files-text" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"
+                aria-label="File content" data-i18n-aria="fs.editor.aria"></textarea>
+      <div class="dialog-actions">
+        <button id="files-save" type="button" data-i18n="fs.save">Save (new version)</button>
+        <button id="files-editor-export" type="button" class="secondary" data-i18n="fs.export">Export</button>
+        <span class="spacer"></span>
+        <button id="files-editor-close" type="button" class="secondary" data-i18n="fs.back">Back to the list</button>
+      </div>
+    </div>
+    <p id="files-status" class="hint files-status" role="status"></p>
+  </dialog>
+
+  <dialog id="files-ask" class="dialog files-small">
+    <form method="dialog">
+      <h2 id="files-ask-title"></h2>
+      <p id="files-ask-hint" class="hint"></p>
+      <input id="files-ask-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <div class="dialog-actions">
+        <span class="spacer"></span>
+        <button type="submit" value="cancel" class="secondary" formnovalidate data-i18n="fs.cancel">Cancel</button>
+        <button type="submit" value="ok" data-i18n="fs.ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="files-props-dialog" class="dialog files-small">
+    <form method="dialog">
+      <h2 data-i18n="fs.props">Properties</h2>
+      <p><code id="props-name"></code></p>
+      <dl id="props-facts" class="props-facts"></dl>
+      <fieldset class="field">
+        <legend data-i18n="fs.props.protection">Protection</legend>
+        <table class="prot-table">
+          <thead><tr><th></th><th data-i18n="fs.right.R">Read</th><th data-i18n="fs.right.W">Write</th><th data-i18n="fs.right.E">Execute</th><th data-i18n="fs.right.D">Delete</th></tr></thead>
+          <tbody>
+            <tr><th data-i18n="fs.class.S">System</th><td><input id="prot-S-R" type="checkbox" aria-label="System R"></td><td><input id="prot-S-W" type="checkbox" aria-label="System W"></td><td><input id="prot-S-E" type="checkbox" aria-label="System E"></td><td><input id="prot-S-D" type="checkbox" aria-label="System D"></td></tr>
+            <tr><th data-i18n="fs.class.O">Owner</th><td><input id="prot-O-R" type="checkbox" aria-label="Owner R"></td><td><input id="prot-O-W" type="checkbox" aria-label="Owner W"></td><td><input id="prot-O-E" type="checkbox" aria-label="Owner E"></td><td><input id="prot-O-D" type="checkbox" aria-label="Owner D"></td></tr>
+            <tr><th data-i18n="fs.class.G">Group</th><td><input id="prot-G-R" type="checkbox" aria-label="Group R"></td><td><input id="prot-G-W" type="checkbox" aria-label="Group W"></td><td><input id="prot-G-E" type="checkbox" aria-label="Group E"></td><td><input id="prot-G-D" type="checkbox" aria-label="Group D"></td></tr>
+            <tr><th data-i18n="fs.class.W">World</th><td><input id="prot-W-R" type="checkbox" aria-label="World R"></td><td><input id="prot-W-W" type="checkbox" aria-label="World W"></td><td><input id="prot-W-E" type="checkbox" aria-label="World E"></td><td><input id="prot-W-D" type="checkbox" aria-label="World D"></td></tr>
+          </tbody>
+        </table>
+      </fieldset>
+      <div class="props-row">
+        <label class="field"><span data-i18n="fs.props.group">Owner: group (octal)</span><input id="props-group" type="text" inputmode="numeric" pattern="[0-7]+" size="6"></label>
+        <label class="field"><span data-i18n="fs.props.member">member (octal)</span><input id="props-member" type="text" inputmode="numeric" pattern="[0-7]+" size="6"></label>
+        <label class="field"><span id="props-limit-label">Version limit</span><input id="props-limit" type="number" min="0" max="32767"></label>
+      </div>
+      <div id="props-format" class="props-row">
+        <label class="field"><span data-i18n="fs.props.rfm">Record format</span>
+          <select id="props-rfm">
+            <option value="0">UDF</option><option value="1">FIX</option><option value="2">VAR</option><option value="3">VFC</option>
+            <option value="4">STM</option><option value="5">STMLF</option><option value="6">STMCR</option>
+          </select></label>
+        <label class="field"><span data-i18n="fs.props.rsize">Record size</span><input id="props-rsize" type="number" min="0" max="32767"></label>
+        <label class="check"><input id="props-cr" type="checkbox"> <span data-i18n="fs.props.cr">One line per record (CR)</span></label>
+      </div>
+      <div class="dialog-actions">
+        <span class="spacer"></span>
+        <button type="submit" value="cancel" class="secondary" formnovalidate data-i18n="fs.cancel">Cancel</button>
+        <button id="props-save" type="submit" value="ok" data-i18n="fs.props.save">Save</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="vendor/xterm/xterm.js?v=0583ea9d"></script>
+  <script type="module" src="main.js?v=0583ea9d"></script>
 </body>
 </html>

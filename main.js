@@ -5,8 +5,9 @@
 // localStorage. Rien n'est envoyé sur le réseau.
 
 import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js';
+import { initFiles, openFiles, filesReply, filesPowerChanged } from './files.js';
 
-const VERSION = '0.3.2';
+const VERSION = '0.4.0';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -458,6 +459,7 @@ async function powerOn() {
   });
   showNet(prefs.netMode === 'bridge' ? 'connecting' : 'virtual');
   running = true;
+  filesPowerChanged();
   prefs.power = true;
   savePrefs();
   updateButtons();
@@ -470,6 +472,7 @@ function powerOff(user = false) {
   const w = worker;
   worker = null;
   running = false;
+  if (w) filesPowerChanged();
   speed.textContent = '';
   telnetStateChanged('off', null);
   if (user) {
@@ -537,6 +540,9 @@ function onWorkerMessage(e) {
       break;
     case 'diskLost':
       diskLost(msg.unit);
+      break;
+    case 'fs':
+      filesReply(msg);
       break;
     case 'tcp':
       telnetInput(msg.bytes);
@@ -688,6 +694,7 @@ function renderDisks() {
       actions.append(button(t('disk.blank'), t('disk.blank.tip'), 'i-plus', () => blankDisk(unit), locked));
     }
     actions.append(button('', t('disk.download'), 'i-download', () => downloadDisk(unit), !d?.file || diskBusy));
+    actions.append(button(t('disk.browse'), t('disk.browse.tip'), 'i-folder', () => openFiles(unit), !d?.file || diskBusy));
     actions.append(button('', t('disk.eject.tip'), 'i-eject', () => ejectDisk(unit), !d?.file || locked));
     box.append(head, info, actions);
     diskUnits.append(box);
@@ -1960,3 +1967,8 @@ showRomInfo();
 updateButtons();
 if (rom && prefs.power) powerOn();
 else if (rom) showStatus('status.off');
+
+// ------------------------------------------------------------------ gestionnaire de fichiers
+
+// Tant que le fil de la machine existe, c'est lui qui tient les images (lecture seule).
+initFiles({ disks: () => prefs.disks, running: () => !!worker, worker: () => worker, version: V });

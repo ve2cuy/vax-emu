@@ -122,11 +122,66 @@ export class Emulator {
     use_bridge(): void;
 }
 
+export class Ods2 {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    copy(num: number, seq: number, tnum: number, tseq: number, to_name: string): number;
+    /**
+     * Crée un fichier depuis des octets de l'hôte : texte (une ligne par enregistrement)
+     * ou blocs de 512 octets. Rend « version ».
+     */
+    create(dnum: number, dseq: number, name: string, data: Uint8Array, text: boolean): number;
+    info(): string;
+    /**
+     * Vrai si le début du fichier ressemble à du texte.
+     */
+    is_text(num: number, seq: number): boolean;
+    /**
+     * Entrées d'un répertoire : [{name, version, num, seq, alias, …attributs}].
+     */
+    list(num: number, seq: number): string;
+    mkdir(dnum: number, dseq: number, name: string): void;
+    /**
+     * Ouvre le volume de l'image. `now_ms` : l'heure locale (millisecondes Unix décalées
+     * du fuseau), pour dater ce qui est créé.
+     */
+    static open(disk: any, now_ms: number): Ods2;
+    /**
+     * Ne garde que les `keep` versions les plus récentes. Rend le nombre effacé.
+     */
+    purge(dnum: number, dseq: number, name: string, keep: number): number;
+    /**
+     * Contenu brut (jusqu'à la fin logique), au plus `limit` octets.
+     */
+    read(num: number, seq: number, limit: number): Uint8Array;
+    /**
+     * Contenu en texte : un enregistrement par ligne.
+     */
+    read_text(num: number, seq: number, limit: number): string;
+    remove(dnum: number, dseq: number, name: string, version: number): void;
+    rename(dnum: number, dseq: number, name: string, version: number, tnum: number, tseq: number, to_name: string): number;
+    /**
+     * Enregistre un texte édité : nouvelle version, dans le format du fichier `like`
+     * (0 : aucun, format texte ordinaire).
+     */
+    save_text(dnum: number, dseq: number, name: string, text: string, like_num: number, like_seq: number): number;
+    set_default_versions(num: number, seq: number, limit: number): void;
+    set_record_format(num: number, seq: number, rfm: number, rat: number, rsize: number): void;
+    /**
+     * Protection (« RWED,RWED,RE, », vide : inchangée) et propriétaire (groupe négatif :
+     * inchangé).
+     */
+    set_security(num: number, seq: number, protection: string, group: number, member: number): void;
+    set_version_limit(dnum: number, dseq: number, name: string, limit: number): void;
+}
+
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_emulator_free: (a: number, b: number) => void;
+    readonly __wbg_ods2_free: (a: number, b: number) => void;
     readonly emulator_attach_disk: (a: number, b: number, c: number, d: number, e: any) => [number, number];
     readonly emulator_detach_disk: (a: number, b: number) => void;
     readonly emulator_disk_read: (a: number, b: number) => number;
@@ -157,6 +212,23 @@ export interface InitOutput {
     readonly emulator_take_output: (a: number) => [number, number];
     readonly emulator_type_bytes: (a: number, b: number, c: number) => void;
     readonly emulator_use_bridge: (a: number) => void;
+    readonly ods2_copy: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number];
+    readonly ods2_create: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number];
+    readonly ods2_info: (a: number) => [number, number, number, number];
+    readonly ods2_is_text: (a: number, b: number, c: number) => [number, number, number];
+    readonly ods2_list: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly ods2_mkdir: (a: number, b: number, c: number, d: number, e: number) => [number, number];
+    readonly ods2_open: (a: any, b: number) => [number, number, number];
+    readonly ods2_purge: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
+    readonly ods2_read: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly ods2_read_text: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly ods2_remove: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
+    readonly ods2_rename: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => [number, number, number];
+    readonly ods2_save_text: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => [number, number, number];
+    readonly ods2_set_default_versions: (a: number, b: number, c: number, d: number) => [number, number];
+    readonly ods2_set_record_format: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
+    readonly ods2_set_security: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+    readonly ods2_set_version_limit: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

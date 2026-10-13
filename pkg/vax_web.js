@@ -301,24 +301,337 @@ export class Emulator {
     }
 }
 if (Symbol.dispose) Emulator.prototype[Symbol.dispose] = Emulator.prototype.free;
+
+export class Ods2 {
+    static __wrap(ptr) {
+        const obj = Object.create(Ods2.prototype);
+        obj.__wbg_ptr = ptr;
+        Ods2Finalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        Ods2Finalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_ods2_free(ptr, 0);
+    }
+    /**
+     * @param {number} num
+     * @param {number} seq
+     * @param {number} tnum
+     * @param {number} tseq
+     * @param {string} to_name
+     * @returns {number}
+     */
+    copy(num, seq, tnum, tseq, to_name) {
+        const ptr0 = passStringToWasm0(to_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.ods2_copy(this.__wbg_ptr, num, seq, tnum, tseq, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
+     * Crée un fichier depuis des octets de l'hôte : texte (une ligne par enregistrement)
+     * ou blocs de 512 octets. Rend « version ».
+     * @param {number} dnum
+     * @param {number} dseq
+     * @param {string} name
+     * @param {Uint8Array} data
+     * @param {boolean} text
+     * @returns {number}
+     */
+    create(dnum, dseq, name, data, text) {
+        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.ods2_create(this.__wbg_ptr, dnum, dseq, ptr0, len0, ptr1, len1, text);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
+     * @returns {string}
+     */
+    info() {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ret = wasm.ods2_info(this.__wbg_ptr);
+            var ptr1 = ret[0];
+            var len1 = ret[1];
+            if (ret[3]) {
+                ptr1 = 0; len1 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred2_0 = ptr1;
+            deferred2_1 = len1;
+            return getStringFromWasm0(ptr1, len1);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * Vrai si le début du fichier ressemble à du texte.
+     * @param {number} num
+     * @param {number} seq
+     * @returns {boolean}
+     */
+    is_text(num, seq) {
+        const ret = wasm.ods2_is_text(this.__wbg_ptr, num, seq);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] !== 0;
+    }
+    /**
+     * Entrées d'un répertoire : [{name, version, num, seq, alias, …attributs}].
+     * @param {number} num
+     * @param {number} seq
+     * @returns {string}
+     */
+    list(num, seq) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ret = wasm.ods2_list(this.__wbg_ptr, num, seq);
+            var ptr1 = ret[0];
+            var len1 = ret[1];
+            if (ret[3]) {
+                ptr1 = 0; len1 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred2_0 = ptr1;
+            deferred2_1 = len1;
+            return getStringFromWasm0(ptr1, len1);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * @param {number} dnum
+     * @param {number} dseq
+     * @param {string} name
+     */
+    mkdir(dnum, dseq, name) {
+        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.ods2_mkdir(this.__wbg_ptr, dnum, dseq, ptr0, len0);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * Ouvre le volume de l'image. `now_ms` : l'heure locale (millisecondes Unix décalées
+     * du fuseau), pour dater ce qui est créé.
+     * @param {any} disk
+     * @param {number} now_ms
+     * @returns {Ods2}
+     */
+    static open(disk, now_ms) {
+        const ret = wasm.ods2_open(disk, now_ms);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return Ods2.__wrap(ret[0]);
+    }
+    /**
+     * Ne garde que les `keep` versions les plus récentes. Rend le nombre effacé.
+     * @param {number} dnum
+     * @param {number} dseq
+     * @param {string} name
+     * @param {number} keep
+     * @returns {number}
+     */
+    purge(dnum, dseq, name, keep) {
+        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.ods2_purge(this.__wbg_ptr, dnum, dseq, ptr0, len0, keep);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
+     * Contenu brut (jusqu'à la fin logique), au plus `limit` octets.
+     * @param {number} num
+     * @param {number} seq
+     * @param {number} limit
+     * @returns {Uint8Array}
+     */
+    read(num, seq, limit) {
+        const ret = wasm.ods2_read(this.__wbg_ptr, num, seq, limit);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+    /**
+     * Contenu en texte : un enregistrement par ligne.
+     * @param {number} num
+     * @param {number} seq
+     * @param {number} limit
+     * @returns {string}
+     */
+    read_text(num, seq, limit) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ret = wasm.ods2_read_text(this.__wbg_ptr, num, seq, limit);
+            var ptr1 = ret[0];
+            var len1 = ret[1];
+            if (ret[3]) {
+                ptr1 = 0; len1 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred2_0 = ptr1;
+            deferred2_1 = len1;
+            return getStringFromWasm0(ptr1, len1);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * @param {number} dnum
+     * @param {number} dseq
+     * @param {string} name
+     * @param {number} version
+     */
+    remove(dnum, dseq, name, version) {
+        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.ods2_remove(this.__wbg_ptr, dnum, dseq, ptr0, len0, version);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * @param {number} dnum
+     * @param {number} dseq
+     * @param {string} name
+     * @param {number} version
+     * @param {number} tnum
+     * @param {number} tseq
+     * @param {string} to_name
+     * @returns {number}
+     */
+    rename(dnum, dseq, name, version, tnum, tseq, to_name) {
+        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(to_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.ods2_rename(this.__wbg_ptr, dnum, dseq, ptr0, len0, version, tnum, tseq, ptr1, len1);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
+     * Enregistre un texte édité : nouvelle version, dans le format du fichier `like`
+     * (0 : aucun, format texte ordinaire).
+     * @param {number} dnum
+     * @param {number} dseq
+     * @param {string} name
+     * @param {string} text
+     * @param {number} like_num
+     * @param {number} like_seq
+     * @returns {number}
+     */
+    save_text(dnum, dseq, name, text, like_num, like_seq) {
+        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(text, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.ods2_save_text(this.__wbg_ptr, dnum, dseq, ptr0, len0, ptr1, len1, like_num, like_seq);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
+     * @param {number} num
+     * @param {number} seq
+     * @param {number} limit
+     */
+    set_default_versions(num, seq, limit) {
+        const ret = wasm.ods2_set_default_versions(this.__wbg_ptr, num, seq, limit);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * @param {number} num
+     * @param {number} seq
+     * @param {number} rfm
+     * @param {number} rat
+     * @param {number} rsize
+     */
+    set_record_format(num, seq, rfm, rat, rsize) {
+        const ret = wasm.ods2_set_record_format(this.__wbg_ptr, num, seq, rfm, rat, rsize);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * Protection (« RWED,RWED,RE, », vide : inchangée) et propriétaire (groupe négatif :
+     * inchangé).
+     * @param {number} num
+     * @param {number} seq
+     * @param {string} protection
+     * @param {number} group
+     * @param {number} member
+     */
+    set_security(num, seq, protection, group, member) {
+        const ptr0 = passStringToWasm0(protection, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.ods2_set_security(this.__wbg_ptr, num, seq, ptr0, len0, group, member);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * @param {number} dnum
+     * @param {number} dseq
+     * @param {string} name
+     * @param {number} limit
+     */
+    set_version_limit(dnum, dseq, name, limit) {
+        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.ods2_set_version_limit(this.__wbg_ptr, dnum, dseq, ptr0, len0, limit);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+}
+if (Symbol.dispose) Ods2.prototype[Symbol.dispose] = Ods2.prototype.free;
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
         __wbg___wbindgen_throw_41e9ee4f547fc59a: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
-        __wbg_flush_0fe6518a9fda16c7: function(arg0) {
+        __wbg_flush_bd36ee149949591d: function(arg0) {
             arg0.flush();
         },
-        __wbg_read_3eb91eff16ebca5e: function(arg0, arg1, arg2, arg3) {
+        __wbg_read_ba7856f98b3bdaf9: function(arg0, arg1, arg2, arg3) {
             const ret = arg0.read(arg1, getArrayU8FromWasm0(arg2, arg3));
             return ret;
         },
-        __wbg_size_343976eb387b70e6: function(arg0) {
+        __wbg_size_9af1989fd7e6b58c: function(arg0) {
             const ret = arg0.size();
             return ret;
         },
-        __wbg_write_ee2f1543904b18f8: function(arg0, arg1, arg2, arg3) {
+        __wbg_write_6b3f3c3b28d7ca58: function(arg0, arg1, arg2, arg3) {
             const ret = arg0.write(arg1, getArrayU8FromWasm0(arg2, arg3));
             return ret;
         },
@@ -346,6 +659,9 @@ function __wbg_get_imports() {
 const EmulatorFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_emulator_free(ptr, 1));
+const Ods2Finalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_ods2_free(ptr, 1));
 
 function getArrayU8FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
