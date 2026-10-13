@@ -36,9 +36,10 @@ Le bouton **Arrêt** (ou Ctrl+P, quand la console le permet) arrête le processe
 revient à l'invite `>>>`, comme la touche BREAK d'un vrai terminal de console.
 
 Le VAX va normalement au rythme du temps réel, comme la vraie machine, environ 10 MIPS. Le
-bouton **Turbo** le fait aller aussi vite que le permet votre fureteur et saute les
-attentes : OpenVMS démarre en 5 secondes environ plutôt qu'en 23. Tant que le Turbo est
-actif, l'horloge d'OpenVMS prend de l'avance sur l'heure réelle.
+bouton **Turbo** le laisse aller aussi vite que le permet votre fureteur quand il
+travaille (calcul, disques, affichage) : OpenVMS démarre en 9 secondes environ plutôt
+qu'en 23. Quand le VAX attend, à une invite par exemple, il garde le temps réel : rien
+n'expire plus vite, et l'horloge d'OpenVMS ne prend qu'un peu d'avance pendant les rafales.
 
 ## Dépôt et installations en un clic
 
@@ -82,6 +83,9 @@ est conservé.
 
 - **Importer…** copie une image de disque (`.dsk`) ou de CD (`.iso`) de votre ordinateur.
 - **Vierge** crée un disque vide du type choisi (RA82, RA92...).
+- Un fureteur peut effacer ce stockage quand l'espace manque, sauf s'il lui a accordé le
+  statut « persistant » (le menu Disques l'indique) : **téléchargez vos disques** pour en
+  garder une copie.
 - Le bouton de téléchargement remet une image sur votre ordinateur; **Éjecter** la retire.
 
 Pour installer OpenVMS VAX (éteignez le VAX pour changer les disques) :

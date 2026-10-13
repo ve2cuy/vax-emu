@@ -3,14 +3,15 @@
 // retard est abandonné au-delà de 200 ms (le VAX ralentit, sans rattrapage brutal).
 //
 // Messages reçus : start {rom, nvr, mem, server, disks, bridge}, input {bytes}, break, stop,
-// turbo {on} (temps simulé détaché du temps réel : le VAX va aussi vite que le fureteur le
-// permet; l'horloge de VMS prend de l'avance), speed {factor} (vitesse du processeur : ×1 = 10 MIPS; pas encore offerte dans la page :
+// turbo {on} (quand le VAX travaille — calcul, disques, console —, le temps simulé va aussi
+// vite que le fureteur le permet; quand il attend sans rien faire, retour au temps réel), speed {factor} (vitesse du processeur : ×1 = 10 MIPS; pas encore offerte dans la page :
 // le fureteur plafonne vers 16 MIPS et la boucle d'attente de VMS n'est pas reconnue),
-// swap {unit, drive, file} (change l'image d'un lecteur machine en marche; file nul : retire;
+// flush (écrit tout de suite les images et la NVR : onglet quitté), swap {unit, drive, file} (change l'image d'un lecteur machine en marche; file nul : retire;
 // répond swapped {unit}).
 // Messages envoyés : ready, output {bytes}, stats {mips, simMs, io [[lus, écrits] × 4]},
 // nvr {bytes}, stopped {reason},
-// closed (images fermées après stop), error {msg}, net {state, url} (relais vax-bridge).
+// closed (images fermées après stop), error {msg}, diskLost {unit, file} (image absente
+// du stockage du fureteur : le lecteur reste vide), net {state, url} (relais vax-bridge).
 //
 // Réseau : par défaut, le réseau virtuel de la machine (passerelle 10.0.2.2). Avec
 // `bridge` (adresse ws://…), chaque trame Ethernet du VAX part par un WebSocket vers le
@@ -34,6 +35,9 @@ let lastNvr = null;
 let handles = new Map();   // lecteur -> accès synchrone OPFS ouvert (fermés à l'arrêt)
 let bridgeUrl = null;
 let turbo = false;
+let burst = false;       // Turbo : en rafale (temps simulé détaché du temps réel)
+let lastActivity = 0;    // dernière activité du VAX (temps réel)
+let lastIo = 0;
 let socket = null;
 let socketTimer = 0;
 let flushTime = 0;
@@ -42,7 +46,9 @@ let flushTime = 0;
 async function openDisk(file, unit) {
   const root = await navigator.storage.getDirectory();
   const dir = await root.getDirectoryHandle('disks', { create: true });
-  const fh = await dir.getFileHandle(file, { create: true });
+  // Jamais de création ici : une image disparue (stockage effacé par le fureteur) doit se
+  // voir, pas devenir en silence un disque vide.
+  const fh = await dir.getFileHandle(file);
   const h = await fh.createSyncAccessHandle();
   handles.set(unit, h);
   return {
@@ -154,6 +160,18 @@ function flushNvr(force = false) {
   }
 }
 
+// Turbo : le VAX n'accélère que s'il a travaillé depuis moins de TURBO_WINDOW_MS (sortie à
+// la console, lecture ou écriture d'un disque, processeur occupé). Sinon il attend
+// quelqu'un — une invite, par exemple — et suit le temps réel : l'invite de connexion
+// n'expire pas plus vite et l'horloge de VMS ne file pas. En rafale, le calcul va à pleine
+// vitesse, mais le temps d'attente sauté ne dépasse pas TURBO_IDLE fois le temps réel
+// (sans cette borne, une invite expirait en un instant, son message relançait la rafale
+// et le temps s'emballait).
+const TURBO_WINDOW_MS = 1000;
+const TURBO_IDLE = 8;
+let idleAllow = 0;       // attente qu'on peut encore sauter (ms simulées)
+let prevTick = 0;
+
 const nextTick = new MessageChannel();
 nextTick.port1.onmessage = () => tick();
 
@@ -161,29 +179,64 @@ function tick() {
   if (!running) return;
   const t0 = performance.now();
   let sim = emu.now_ms();
-  let target = turbo ? Infinity : simBase + (t0 - realBase);
-  if (!turbo && target - sim > MAX_LAG_MS) {
+  const sim0 = sim;
+  const wasBurst = burst;
+  burst = turbo && t0 - lastActivity < TURBO_WINDOW_MS;
+  // Fin d'une rafale : le temps réel repart de l'heure simulée atteinte.
+  if (wasBurst && !burst) simBase = sim - (t0 - realBase);
+  let target = burst ? Infinity : simBase + (t0 - realBase);
+  if (!burst && target - sim > MAX_LAG_MS) {
     // Retard abandonné : l'horloge simulée glisse.
     simBase = sim + MAX_LAG_MS - (t0 - realBase);
     target = sim + MAX_LAG_MS;
   }
+  idleAllow = Math.min(idleAllow + Math.min(t0 - prevTick, 50) * TURBO_IDLE, 400);
+  prevTick = t0;
+  let inst = 0;
+  let waiting = false;   // rafale : plus d'attente à sauter pour l'instant
   while (sim < target && performance.now() - t0 < SLICE_MS) {
-    if (!emu.run(turbo ? 4 : Math.min(target - sim, 4), 2_000_000)) {
+    if (!emu.run(Math.min(target - sim, 4), 2_000_000)) {
       running = false;
       post({ type: 'stopped', reason: emu.stop_reason() });
       break;
     }
-    sim = emu.now_ms();
+    const n = emu.take_instructions();
+    const next = emu.now_ms();
+    inst += n;
+    if (burst) {
+      // Temps écoulé sans instruction (100 ns chacune) : de l'attente sautée.
+      idleAllow -= Math.max(0, next - sim - n * 1e-4);
+      if (idleAllow <= 0) {
+        sim = next;
+        waiting = true;
+        break;
+      }
+    }
+    sim = next;
   }
   if (emu) sendFrames();
   const out = emu.take_output();
   if (out.length) post({ type: 'output', bytes: out }, [out.buffer]);
 
   const now = performance.now();
-  statInst += emu.take_instructions();
+  statInst += inst;
+  if (turbo) {
+    // Activité : console, disques, ou processeur occupé pendant plus de la moitié du
+    // temps simulé écoulé (100 ns par instruction; le reste a été sauté en attente).
+    let io = 0;
+    for (let u = 0; u < 4; u++) io += emu.disk_read(u) + emu.disk_written(u);
+    const busy = inst * 1e-4 > (sim - sim0) / 2 && inst > 1000;
+    // L'écho d'une touche (quelques octets) n'est pas du travail : sinon taper à une
+    // invite ferait sauter le temps et l'invite de connexion expirerait.
+    if (out.length >= 16 || io !== lastIo || busy) lastActivity = now;
+    lastIo = io;
+  }
   if (now - statTime >= 1000) {
     const io = [0, 1, 2, 3].map((u) => [emu.disk_read(u), emu.disk_written(u)]);
-    post({ type: 'stats', mips: statInst / (now - statTime) / 1000, simMs: sim, io });
+    const sizes = [0, 1, 2, 3].map((u) => {
+      try { return handles.get(u)?.getSize() ?? null; } catch { return null; }
+    });
+    post({ type: 'stats', mips: statInst / (now - statTime) / 1000, simMs: sim, io, sizes });
     statInst = 0;
     statTime = now;
   }
@@ -191,14 +244,14 @@ function tick() {
     nvrTime = now;
     flushNvr();
   }
-  if (now - flushTime >= 10000) {
+  if (now - flushTime >= 3000) {
     flushTime = now;
     emu.flush_disks();
   }
   if (!running) return;
-  // Turbo : tour suivant tout de suite (un setTimeout(0) répété attend 4 ms).
-  if (turbo) nextTick.port2.postMessage(0);
-  else setTimeout(tick, sim >= target ? 4 : 0);
+  // En rafale : tour suivant tout de suite (un setTimeout(0) répété attend 4 ms).
+  if (burst && !waiting) nextTick.port2.postMessage(0);
+  else setTimeout(tick, burst || sim >= target ? 4 : 0);
 }
 
 self.onmessage = async (e) => {
@@ -211,7 +264,14 @@ self.onmessage = async (e) => {
         if (emu) emu.free();
         closeDisks();
         emu = new Emulator(msg.mem);
-        for (const d of msg.disks ?? []) emu.attach_disk(d.unit, d.drive, await openDisk(d.file, d.unit));
+        for (const d of msg.disks ?? []) {
+          try {
+            emu.attach_disk(d.unit, d.drive, await openDisk(d.file, d.unit));
+          } catch (err) {
+            if (err?.name !== 'NotFoundError') throw err;
+            post({ type: 'diskLost', unit: d.unit, file: d.file });
+          }
+        }
         emu.load_rom(msg.rom, msg.server);
         if (msg.nvr) emu.load_nvr(msg.nvr);
         lastNvr = msg.nvr ? msg.nvr.slice() : null;
@@ -219,6 +279,8 @@ self.onmessage = async (e) => {
         emu.set_time(secs, centis);
         emu.set_speed(msg.speed ?? 1);
         turbo = !!msg.turbo;
+        burst = false;
+        lastActivity = performance.now();
         bridgeUrl = msg.bridge ?? null;
         if (bridgeUrl) emu.use_bridge();
         emu.power_up();
@@ -238,12 +300,20 @@ self.onmessage = async (e) => {
         emu?.type_bytes(msg.bytes);
         break;
       case 'turbo':
-        // En quittant le Turbo, le temps réel repart de l'heure simulée atteinte.
-        if (turbo && !msg.on && emu) simBase = emu.now_ms() - (performance.now() - realBase);
+        // En quittant une rafale, le temps réel repart de l'heure simulée atteinte.
+        if (burst && emu) simBase = emu.now_ms() - (performance.now() - realBase);
+        burst = false;
         turbo = !!msg.on;
+        lastActivity = performance.now();
         break;
       case 'speed':
         emu?.set_speed(msg.factor);
+        break;
+      case 'flush':
+        if (emu) {
+          emu.flush_disks();
+          flushNvr();
+        }
         break;
       case 'swap': {
         if (emu) {

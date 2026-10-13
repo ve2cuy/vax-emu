@@ -6,7 +6,7 @@
 
 import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js';
 
-const VERSION = '0.2.1';
+const VERSION = '0.2.2';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -395,6 +395,8 @@ async function powerOn() {
   term.reset();
   showStatus('status.starting');
   const nvr = await dbGet('nvr');
+  keepStorage();
+  for (const d of prefs.disks) if (d?.missing) delete d.missing;   // revérifié par le fil
   worker = new Worker(`worker.js${V}`, { type: 'module' });
   worker.onmessage = onWorkerMessage;
   worker.onerror = (e) => showStatus('error', { msg: e.message ?? 'worker' });
@@ -452,9 +454,13 @@ function powerOff(user = false) {
 function onWorkerMessage(e) {
   const msg = e.data;
   switch (msg.type) {
-    case 'ready':
-      showStatus('status.running', { model: modelName(), mem: prefs.mem });
+    case 'ready': {
+      // Une image disparue reste signalée (le message « En marche » ne la cache pas).
+      const lost = prefs.disks.findIndex((d) => d?.missing);
+      if (lost >= 0) showStatus('disk.lost', { unit: `DUA${lost}`, name: prefs.disks[lost].name });
+      else showStatus('status.running', { model: modelName(), mem: prefs.mem });
       break;
+    }
     case 'output': {
       const text = bytesToString(msg.bytes);
       term.write(text);
@@ -463,6 +469,8 @@ function onWorkerMessage(e) {
     }
     case 'stats':
       speed.textContent = t('speed', { mips: msg.mips.toFixed(1) });
+      showSizes(msg.sizes);
+      window.vaxSimMs = msg.simMs;   // pour les essais (temps simulé)
       pilotStats(msg);
       break;
     case 'nvr':
@@ -478,6 +486,9 @@ function onWorkerMessage(e) {
       break;
     case 'net':
       showNet(msg.state);
+      break;
+    case 'diskLost':
+      diskLost(msg.unit);
       break;
     case 'swapped':
       swapDone?.();
@@ -610,7 +621,9 @@ function renderDisks() {
     head.append(label, sel);
     const info = document.createElement('span');
     info.className = 'hint';
-    info.textContent = d?.file ? t('disk.size', { name: d.name, mb: Math.round((d.size ?? 0) / 1048576) }) : t('disk.empty');
+    info.textContent = diskLabel(d);
+    if (d?.missing) info.classList.add('error');
+    diskInfo[unit] = info;
     const actions = document.createElement('div');
     actions.className = 'row';
     actions.append(button(t('disk.import'), t('disk.import.tip'), 'i-upload', () => {
@@ -636,9 +649,87 @@ async function showUsage() {
   }
   try {
     const e = await navigator.storage.estimate();
-    diskUsage.textContent = t('disk.usage', { used: (e.usage / 1e9).toFixed(1), quota: (e.quota / 1e9).toFixed(0) });
+    const persisted = await navigator.storage.persisted?.();
+    diskUsage.textContent = `${t('disk.usage', { used: (e.usage / 1e9).toFixed(1), quota: (e.quota / 1e9).toFixed(0) })} ${
+      t(persisted ? 'disk.persisted' : 'disk.notPersisted')}`;
   } catch { /* estimation indisponible */ }
 }
+
+const diskInfo = [];   // ligne « nom — taille » de chaque lecteur
+
+function diskLabel(d) {
+  if (!d?.file) return t('disk.empty');
+  if (d.missing) return t('disk.missing', { name: d.name });
+  return t('disk.size', { name: d.name, mb: Math.round((d.size ?? 0) / 1048576) });
+}
+
+/** Tailles réelles des images ouvertes par le fil (une fois par seconde). */
+function showSizes(sizes) {
+  if (!sizes) return;
+  let changed = false;
+  sizes.forEach((size, unit) => {
+    const d = prefs.disks[unit];
+    if (size == null || !d?.file || d.size === size) return;
+    d.size = size;
+    changed = true;
+    if (diskInfo[unit]) diskInfo[unit].textContent = diskLabel(d);
+  });
+  if (changed) savePrefs();
+}
+
+/** Machine éteinte : taille réelle de chaque image dans l'OPFS; image absente signalée. */
+async function checkDisks() {
+  if (!opfsOk || running) return;
+  let dir;
+  try {
+    dir = await diskDir();
+  } catch {
+    return;
+  }
+  let changed = false;
+  for (const d of prefs.disks) {
+    if (!d?.file) continue;
+    let size = null;
+    try {
+      size = (await (await dir.getFileHandle(d.file)).getFile()).size;
+    } catch (e) {
+      if (e?.name !== 'NotFoundError') continue;   // fichier occupé : on ne sait pas
+    }
+    const missing = size === null;
+    if (!!d.missing !== missing || (!missing && d.size !== size)) {
+      d.missing = missing || undefined;
+      if (!missing) d.size = size;
+      changed = true;
+    }
+  }
+  if (changed) {
+    savePrefs();
+    renderDisks();
+  }
+}
+
+/** Le fil n'a pas trouvé l'image d'un lecteur : le fureteur a effacé son stockage. */
+function diskLost(unit) {
+  const d = prefs.disks[unit];
+  if (!d) return;
+  d.missing = true;
+  savePrefs();
+  renderDisks();
+  showStatus('disk.lost', { unit: `DUA${unit}`, name: d.name });
+}
+
+/** Demande au fureteur de ne pas effacer ce stockage s'il manque d'espace. */
+async function keepStorage() {
+  try {
+    if (!(await navigator.storage.persisted?.())) await navigator.storage.persist?.();
+  } catch { /* refusé : stockage ordinaire */ }
+  showUsage();
+}
+
+// Onglet quitté ou fermé : écrire tout de suite ce que le VAX a écrit.
+const flushNow = () => worker?.postMessage({ type: 'flush' });
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushNow(); });
+addEventListener('pagehide', flushNow);
 
 async function removeFile(file) {
   try {
@@ -773,6 +864,7 @@ async function showLocalDisks() {
 }
 
 renderDisks();
+checkDisks();
 showLocalDisks();
 
 // ------------------------------------------------------------------ réseau

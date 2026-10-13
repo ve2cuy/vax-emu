@@ -262,7 +262,8 @@ $ IPNCP PING 192.168.2.1 64 3  ! vérifier</pre>
     <li>Disques du dépôt (OpenVMS 7.1 installé) : comptes SYSTEM, SYSTEST et FIELD, mot de passe <code>VAX_EMU_2026</code>.</li>
     <li>Pour changer de disque, éteignez le VAX, sauf quand le bouton « Installer TCP/IP » change lui-même le CD.</li>
     <li>Coller : bouton de la barre ou <kbd>Ctrl+Maj+V</kbd>. Copier : sélectionner le texte, puis le bouton Copier.</li>
-    <li><strong>Turbo</strong> (barre du haut) : le VAX va aussi vite que le fureteur le permet (démarrage d'OpenVMS en 5 s environ); l'horloge de VMS prend de l'avance tant qu'il est actif (<code>SET TIME=12-OCT-2026:18:30</code> pour la remettre à l'heure).</li>
+    <li><strong>Turbo</strong> (barre du haut) : le VAX va aussi vite que le fureteur le permet quand il travaille (démarrage d'OpenVMS en 9 s environ) et garde le temps réel quand il attend; l'horloge de VMS prend un peu d'avance (<code>SET TIME=12-OCT-2026:18:30</code> pour la remettre à l'heure).</li>
+    <li>Les disques sont gardés dans le fureteur, qui peut les effacer si l'espace manque : gardez-en une copie avec le bouton Télécharger du menu Disques. Arrêtez OpenVMS (<code>@SYS$SYSTEM:SHUTDOWN</code>) avant de fermer l'onglet.</li>
   </ul>
 </article>
 
@@ -470,7 +471,8 @@ $ IPNCP PING 192.168.2.1 64 3  ! check</pre>
     <li>Repository disks (OpenVMS 7.1 installed): accounts SYSTEM, SYSTEST and FIELD, password <code>VAX_EMU_2026</code>.</li>
     <li>To change disks, power the VAX off, except when the Install TCP/IP button changes the CD itself.</li>
     <li>Paste: toolbar button or <kbd>Ctrl+Shift+V</kbd>. Copy: select the text, then the Copy button.</li>
-    <li><strong>Turbo</strong> (toolbar): the VAX runs as fast as the browser allows (OpenVMS boots in about 5 s); the VMS clock runs ahead while it is on (<code>SET TIME=12-OCT-2026:18:30</code> to set it back).</li>
+    <li><strong>Turbo</strong> (toolbar): the VAX runs as fast as the browser allows while it is working (OpenVMS boots in about 9 s) and keeps real time while it waits; the VMS clock gains a little (<code>SET TIME=12-OCT-2026:18:30</code> to set it back).</li>
+    <li>Disks are kept in the browser, which may erase them if space runs low: keep a copy with the Download button of the Disks menu. Shut OpenVMS down (<code>@SYS$SYSTEM:SHUTDOWN</code>) before closing the tab.</li>
   </ul>
 </article>
 

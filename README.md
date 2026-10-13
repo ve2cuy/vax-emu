@@ -34,8 +34,10 @@ The **Halt** button (or Ctrl+P, when the console allows it) stops the processor 
 returns to the `>>>` prompt, like the BREAK key of a real console terminal.
 
 Normally the VAX runs in real time, like the real machine, about 10 MIPS. The **Turbo**
-button runs it as fast as your browser allows and skips the waits: OpenVMS boots in about
-5 seconds instead of 23. While Turbo is on, the OpenVMS clock runs ahead of the real time.
+button lets it run as fast as your browser allows while it is working (computing, disk
+transfers, console output): OpenVMS boots in about 9 seconds instead of 23. While the VAX
+waits, at a prompt for example, it keeps real time, so nothing times out faster; the
+OpenVMS clock only gains a little during the bursts.
 
 ## Repository and one-click installs
 
@@ -76,6 +78,8 @@ storage (OPFS) and never leave your computer; what the VAX writes is saved in th
 
 - **Import…** copies a disk image (`.dsk`) or a CD image (`.iso`) from your computer.
 - **Blank** creates an empty disk of the chosen type (RA82, RA92...).
+- Browsers may erase this storage when disk space runs low, unless they granted it
+  "persistent" status (the Disks menu says which): **download your disks** to keep a copy.
 - The download button saves an image back to your computer; **Eject** removes it.
 
 To install OpenVMS VAX (power the VAX off to change the disks):
