@@ -5,8 +5,8 @@
 // réécrirait par-dessus nos modifications). VAX en marche, on peut aussi passer par OpenVMS
 // lui-même : une session telnet cachée exécute les opérations (vms-files.js).
 
-import { t } from './i18n.js?v=c55a8036';
-import { VmsSession, vmsRun, childDir } from './vms-files.js?v=c55a8036';
+import { t } from './i18n.js?v=0288db24';
+import { VmsSession, vmsRun, childDir } from './vms-files.js?v=0288db24';
 
 let ctx = null;          // { disks(), running(), worker(), version }
 let fsWorker = null;
@@ -848,6 +848,11 @@ export function initFiles(context) {
     status('');
   });
   $('files-button').addEventListener('click', () => openFiles());
+  // « Annuler » n'est pas un bouton d'envoi : la touche Entrée dans une petite boîte vaut
+  // donc son bouton principal (OK, Connecter, Enregistrer), pas l'annulation.
+  for (const b of document.querySelectorAll('.files-cancel')) {
+    b.addEventListener('click', () => b.closest('dialog').close('cancel'));
+  }
   $('files-connect').addEventListener('click', () => connectVms());
   $('files-disconnect').addEventListener('click', () => {
     dropSession();
