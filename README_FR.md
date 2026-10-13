@@ -211,14 +211,12 @@ Le modèle **VAXstation 3900** (section Machine) ajoute à la machine une carte 
 monochrome QVSS de 1024 × 864, un clavier LK201 et une souris. Un onglet **Écran** paraît
 alors à côté de Console et Telnet : OpenVMS y affiche DECwindows Motif.
 
-- La console (le ROM, l'amorçage, `OPA0`) reste dans l'onglet Console : sur ce modèle,
-  seul DECwindows utilise l'écran graphique.
+- La console (le ROM, l'amorçage, `OPA0`) reste dans l'onglet Console : seul DECwindows
+  utilise l'écran graphique.
 - Le modèle **VAXstation 3900/GPX** remplace cette carte par la carte **couleur** QDSS
-  (256 couleurs). Là, la console elle-même est sur l'écran : à l'allumage, le ROM y
-  demande la langue du clavier (une seule fois), puis affiche `>>>`; on tape `B DUA0` dans
-  l'onglet Écran. La page télécharge le ROM de la carte (`vcb02.bin`) du projet SIMH. Les
-  boutons d'installation automatique, qui pilotent la console série, ne servent pas avec
-  ce modèle.
+  (256 couleurs). La console reste aussi dans l'onglet Console : la carte est cachée au
+  ROM de la machine, qui sinon y déplacerait sa console, et OpenVMS la trouve à
+  l'amorçage. La page télécharge le ROM de la carte (`vcb02.bin`) du projet SIMH.
 - Cliquez dans l'écran pour y taper. Le pointeur du VAX suit celui de la page; les trois
   boutons de la souris sont transmis.
 - Touches : F1 à F12, les flèches, Inser, Suppr, Début, Fin et Page préc./suiv. sont les

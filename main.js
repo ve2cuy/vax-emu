@@ -4,10 +4,10 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=15daac71';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=15daac71';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=35003211';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=35003211';
 
-const VERSION = '0.7.0';
+const VERSION = '0.7.1';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -444,7 +444,7 @@ async function powerOn() {
   term.reset();
   showStatus('status.starting');
   const nvr = await dbGet('nvr');
-  // Carte couleur : il lui faut son ROM (la console du KA655 et OpenVMS s'en servent).
+  // Carte couleur : il lui faut son ROM (le pilote d'OpenVMS s'en sert).
   let qdssBytes = null;
   if (prefs.model === 'gpx') {
     qdssBytes = await qdssRom();
@@ -471,8 +471,6 @@ async function powerOn() {
   });
   showNet(prefs.netMode === 'bridge' ? 'connecting' : 'virtual');
   clearScreen();
-  // Modèle couleur : la console est sur l'écran graphique.
-  if (prefs.model === 'gpx') showTab('screen');
   running = true;
   filesPowerChanged();
   prefs.power = true;
