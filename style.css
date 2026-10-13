@@ -346,7 +346,6 @@ select, textarea, input[type="url"], input[type="search"] {
 }
 textarea {
   font: 0.9rem/1.4 ui-monospace, Consolas, monospace;
-  text-transform: uppercase;
   resize: vertical;
 }
 
@@ -793,7 +792,7 @@ button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--error)
   background: #000; color: #d8d8d8; font: 0.86rem/1.35 "DejaVu Sans Mono", "Cascadia Mono", Consolas, monospace; resize: none; white-space: pre; tab-size: 8; }
 /* Barre de défilement de l'éditeur : toujours là, large et contrastée, pour voir où l'on
    est dans un long fichier. */
-.files-text { overflow: scroll; scrollbar-width: auto; scrollbar-color: #9aa3b2 #1b1e26; scrollbar-gutter: stable; }
+.files-text { text-transform: none; overflow: scroll; scrollbar-width: auto; scrollbar-color: #9aa3b2 #1b1e26; scrollbar-gutter: stable; }
 .files-text::-webkit-scrollbar { width: 16px; height: 16px; }
 .files-text::-webkit-scrollbar-track { background: #1b1e26; }
 .files-text::-webkit-scrollbar-thumb { background: #9aa3b2; border: 3px solid #1b1e26; border-radius: 8px; min-height: 40px; }
