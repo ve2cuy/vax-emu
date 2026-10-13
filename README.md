@@ -65,12 +65,8 @@ The **Network** menu chooses how the VAX's Ethernet controller (XQA0) is connect
   VAX the address 10.0.2.15.
 - **Local bridge**: the VAX appears on your local network with its own address (set in
   OpenVMS, e.g. 192.168.2.77), through the small *vax-bridge* relay running on your
-  computer. It is on the [Releases](https://github.com/ve2cuy/vax-emu/releases) page for
-  Windows (needs [Npcap](https://npcap.com)), Linux (needs libpcap; run it with `sudo`,
-  or once `sudo setcap cap_net_raw,cap_net_admin=eip vax-bridge`) and macOS (run it with
-  `sudo`). Start it with `vax-bridge --iface <network card or your address>`; a wired
-  card works best. Other computers can then ping it and open
-  telnet sessions; your own PC reaches its telnet at `localhost:2323`.
+  computer (Windows, Linux or macOS). Other computers can then ping it and open telnet
+  sessions. See [Setting up the local bridge](#setting-up-the-local-bridge) below.
 
 The toolbar's book icon opens an **OpenVMS cheat sheet**: basic DCL commands, important
 directories, and how to change the TCP/IP address, gateway or name servers.
@@ -78,6 +74,93 @@ directories, and how to change the TCP/IP address, gateway or name servers.
 Above the screen, the **Telnet** tab opens a telnet session into the VAX in a second
 terminal, next to the console: several logins at once, as on a real system. TCP/IP must be
 running in OpenVMS (the Install TCP/IP button, or the repository's OpenVMS + TCP/IP disk).
+
+## Setting up the local bridge
+
+The *vax-bridge* relay runs on the computer where the browser is. It copies Ethernet
+frames between the page and one of your network cards, so the VAX sits on your local
+network with its own address. A wired card works best: many Wi-Fi cards and access points
+drop frames from a second station address.
+
+### 1. Install the relay
+
+Download the file for your system from the
+[Releases](https://github.com/ve2cuy/vax-emu/releases) page.
+
+**Windows**
+
+1. Install [Npcap](https://npcap.com) (default options).
+2. Download `vax-bridge.exe`.
+3. Find your PC's address with `ipconfig`, then, in a terminal:
+
+   ```
+   vax-bridge --iface 192.168.2.11
+   ```
+
+**Linux** (x86_64)
+
+1. Install libpcap: `sudo apt install libpcap0.8` (Debian, Ubuntu), `sudo dnf install
+   libpcap` (Fedora).
+2. Unpack the relay: `tar xzf vax-bridge-linux-x86_64.tar.gz`
+3. Start it on your network card (`ip addr` lists them):
+
+   ```
+   sudo ./vax-bridge --iface eth0
+   ```
+
+   To run it without `sudo`, give it the right to capture once:
+   `sudo setcap cap_net_raw,cap_net_admin=eip vax-bridge`
+
+**macOS** (`macos-arm64` for Apple Silicon, `macos-x86_64` for Intel)
+
+1. Unpack the relay: `tar xzf vax-bridge-macos-arm64.tar.gz`
+2. The program is not signed. If macOS refuses to start it:
+   `xattr -d com.apple.quarantine vax-bridge`
+3. Start it on your network card (`ifconfig` lists them; libpcap comes with macOS):
+
+   ```
+   sudo ./vax-bridge --iface en0
+   ```
+
+   The macOS builds have not been tried on a real Mac yet; reports are welcome.
+
+On every system, `--iface` takes the card's name, your computer's IPv4 address on that
+card, or a piece of the card's description; `vax-bridge --iface "?"` lists the cards. Leave
+the relay running: it prints `page branchée` when the page connects.
+
+### 2. Connect the page
+
+1. In the page, open the **Network** section and choose **Local bridge**. The relay
+   address stays `ws://127.0.0.1:8023`.
+2. If the browser asks whether this site may reach the apps on this device (local network
+   access), allow it.
+3. Power the VAX on (the network mode takes effect at power-on). The section shows
+   "Bridged to the local network".
+
+### 3. Give the VAX an address of your network
+
+In OpenVMS, with TCP/IP installed (the Install TCP/IP button), log in as SYSTEM and type
+`NETCONFIG`: it asks for the address (one that is free on your network, e.g.
+192.168.2.77), the mask, the gateway and the name servers, restarts TCP/IP and pings the
+gateway.
+
+### 4. Reach the VAX
+
+- From the **other computers** of the network: `ping 192.168.2.77`, `telnet 192.168.2.77`.
+- From the **computer that runs the relay**: `telnet localhost 2323`. A card does not
+  receive the frames it sends itself, so this computer cannot ping the VAX at its address;
+  the relay opens this local port instead.
+- In the page: the **Telnet** tab.
+
+### Relay options
+
+| Option | Default | Use |
+|---|---|---|
+| `--iface <card>` | (required) | network card: name, host address or description; `?` lists them |
+| `--port <n>` | 8023 | port of the page's WebSocket, on 127.0.0.1 only |
+| `--telnet <n>` | 2323 | local port that leads to the VAX's telnet; 0 for none |
+| `--vax-ip <a.b.c.d>` | learned | address of the VAX for `--telnet`, if it is not learned from its frames |
+| `--origin <url>` | | one more page origin allowed to connect, besides https://ve2cuy.github.io |
 
 ## Disks and OpenVMS
 

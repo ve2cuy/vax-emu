@@ -69,12 +69,9 @@ Le menu **Réseau** choisit comment le contrôleur Ethernet du VAX (XQA0) est br
   VAX l'adresse 10.0.2.15.
 - **Pont local** : le VAX paraît sur votre réseau local avec sa propre adresse (réglée dans
   OpenVMS, ex. 192.168.2.77), grâce au petit relais *vax-bridge* qui tourne sur votre
-  ordinateur. Il est dans la page [Releases](https://github.com/ve2cuy/vax-emu/releases)
-  pour Windows (avec [Npcap](https://npcap.com)), Linux (avec libpcap; à lancer avec
-  `sudo`, ou une fois `sudo setcap cap_net_raw,cap_net_admin=eip vax-bridge`) et macOS (à
-  lancer avec `sudo`). Lancez-le par `vax-bridge --iface <carte réseau ou votre adresse>`;
-  une carte filaire convient le mieux. Les autres ordinateurs peuvent alors le
-  « pinger » et s'y connecter par telnet; votre PC joint son telnet à `localhost:2323`.
+  ordinateur (Windows, Linux ou macOS). Les autres ordinateurs peuvent alors le « pinger »
+  et s'y connecter par telnet. Voir [Mise en place du pont réseau](#mise-en-place-du-pont-réseau)
+  plus bas.
 
 L'icône du livre, dans la barre du haut, ouvre un **aide-mémoire OpenVMS** : commandes DCL
 de base, répertoires importants, et comment changer l'adresse TCP/IP, la passerelle ou
@@ -84,6 +81,95 @@ Au-dessus de l'écran, l'onglet **Telnet** ouvre une session telnet vers le VAX 
 deuxième terminal, à côté de la console : plusieurs connexions à la fois, comme sur un vrai
 système. TCP/IP doit être en marche dans OpenVMS (bouton Installer TCP/IP, ou le disque
 OpenVMS + TCP/IP du dépôt).
+
+## Mise en place du pont réseau
+
+Le relais *vax-bridge* tourne sur l'ordinateur où se trouve le fureteur. Il copie les
+trames Ethernet entre la page et une de vos cartes réseau : le VAX se retrouve sur votre
+réseau local avec sa propre adresse. Une carte filaire convient le mieux : bien des cartes
+et des bornes Wi-Fi écartent les trames d'une deuxième adresse de station.
+
+### 1. Installer le relais
+
+Téléchargez le fichier de votre système dans la page
+[Releases](https://github.com/ve2cuy/vax-emu/releases).
+
+**Windows**
+
+1. Installez [Npcap](https://npcap.com) (options par défaut).
+2. Téléchargez `vax-bridge.exe`.
+3. Trouvez l'adresse de votre PC avec `ipconfig`, puis, dans un terminal :
+
+   ```
+   vax-bridge --iface 192.168.2.11
+   ```
+
+**Linux** (x86_64)
+
+1. Installez libpcap : `sudo apt install libpcap0.8` (Debian, Ubuntu), `sudo dnf install
+   libpcap` (Fedora).
+2. Extrayez le relais : `tar xzf vax-bridge-linux-x86_64.tar.gz`
+3. Lancez-le sur votre carte réseau (`ip addr` les énumère) :
+
+   ```
+   sudo ./vax-bridge --iface eth0
+   ```
+
+   Pour le lancer sans `sudo`, donnez-lui une fois le droit de capturer :
+   `sudo setcap cap_net_raw,cap_net_admin=eip vax-bridge`
+
+**macOS** (`macos-arm64` pour Apple Silicon, `macos-x86_64` pour Intel)
+
+1. Extrayez le relais : `tar xzf vax-bridge-macos-arm64.tar.gz`
+2. Le programme n'est pas signé. Si macOS refuse de le lancer :
+   `xattr -d com.apple.quarantine vax-bridge`
+3. Lancez-le sur votre carte réseau (`ifconfig` les énumère; libpcap vient avec macOS) :
+
+   ```
+   sudo ./vax-bridge --iface en0
+   ```
+
+   Les versions macOS n'ont pas encore été essayées sur un vrai Mac; vos retours sont
+   bienvenus.
+
+Sur tous les systèmes, `--iface` reçoit le nom de la carte, l'adresse IPv4 de votre
+ordinateur sur cette carte, ou un morceau de la description de la carte;
+`vax-bridge --iface "?"` énumère les cartes. Laissez le relais en marche : il affiche
+`page branchée` quand la page s'y connecte.
+
+### 2. Brancher la page
+
+1. Dans la page, ouvrez la section **Réseau** et choisissez **Pont local**. L'adresse du
+   relais reste `ws://127.0.0.1:8023`.
+2. Si le fureteur demande de permettre à ce site d'accéder aux applications de cet
+   appareil (accès au réseau local), acceptez.
+3. Allumez le VAX (le mode réseau s'applique à la mise sous tension). La section affiche
+   « Branché au réseau local ».
+
+### 3. Donner au VAX une adresse de votre réseau
+
+Dans OpenVMS, TCP/IP installé (bouton Installer TCP/IP), ouvrez une session SYSTEM et
+tapez `NETCONFIG` : la commande demande l'adresse (libre sur votre réseau, ex.
+192.168.2.77), le masque, la passerelle et les serveurs DNS, relance TCP/IP et « pingue »
+la passerelle.
+
+### 4. Joindre le VAX
+
+- Des **autres ordinateurs** du réseau : `ping 192.168.2.77`, `telnet 192.168.2.77`.
+- De l'**ordinateur qui fait tourner le relais** : `telnet localhost 2323`. Une carte ne
+  reçoit pas les trames qu'elle émet elle-même : cet ordinateur ne peut donc pas
+  « pinger » le VAX à son adresse; le relais ouvre ce port local à la place.
+- Dans la page : l'onglet **Telnet**.
+
+### Options du relais
+
+| Option | Défaut | Rôle |
+|---|---|---|
+| `--iface <carte>` | (obligatoire) | carte réseau : nom, adresse de l'hôte ou description; `?` les énumère |
+| `--port <n>` | 8023 | port du WebSocket de la page, sur 127.0.0.1 seulement |
+| `--telnet <n>` | 2323 | port local mené au telnet du VAX; 0 : aucun |
+| `--vax-ip <a.b.c.d>` | apprise | adresse du VAX pour `--telnet`, si elle n'est pas apprise de ses trames |
+| `--origin <url>` | | origine de page permise en plus de https://ve2cuy.github.io |
 
 ## Disques et OpenVMS
 
