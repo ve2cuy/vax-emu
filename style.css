@@ -752,6 +752,11 @@ button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--error)
 .dialog.files { width: min(1040px, 96vw); height: min(780px, 92vh); max-height: 92vh; padding: 14px 16px; }
 .dialog.files[open] { display: flex; flex-direction: column; }
 .dialog.files-small { width: min(520px, 94vw); }
+/* Mode de travail du gestionnaire, toujours visible dans l'en-tête. */
+.files-mode { padding: 2px 10px; border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: 0.8rem; white-space: nowrap; }
+.files-mode.vms { color: var(--on-accent); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.files-notice.vms .warning { color: var(--text); }
+.files-notice.vms { padding: 6px 10px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent-soft); }
 .files-notice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 0; }
 .files-notice[hidden] { display: none; }
 .files-notice .warning { flex: 1 1 20em; margin: 0; }

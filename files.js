@@ -5,8 +5,8 @@
 // réécrirait par-dessus nos modifications). VAX en marche, on peut aussi passer par OpenVMS
 // lui-même : une session telnet cachée exécute les opérations (vms-files.js).
 
-import { t } from './i18n.js?v=44f15b6f';
-import { VmsSession, vmsRun, childDir } from './vms-files.js?v=44f15b6f';
+import { t } from './i18n.js?v=c55a8036';
+import { VmsSession, vmsRun, childDir } from './vms-files.js?v=c55a8036';
 
 let ctx = null;          // { disks(), running(), worker(), version }
 let fsWorker = null;
@@ -25,6 +25,7 @@ const state = {
   clipboard: null,       // {mode: 'copy' | 'move', unit, items: [{dir, name, version, num, seq}]}
   editing: null,         // {name, like, isNew}
   session: null,         // session OpenVMS ouverte (VAX en marche), sinon null
+  sessionIp: '',         // adresse du VAX jointe par la session
 };
 let connectWait = null;  // attente de l'ouverture de la connexion de la session
 
@@ -170,8 +171,12 @@ function render() {
   $('files-filter').placeholder = t('fs.filter');
   const vms = viaVms();
   $('files-notice').hidden = !ro && !vms;
-  $('files-notice-text').textContent = vms ? t('fs.vms.notice', { user: state.session.user })
+  $('files-notice').classList.toggle('vms', vms);
+  $('files-notice-text').textContent = vms ? t('fs.vms.notice', { user: state.session.user, ip: state.sessionIp || '?' })
     : ctx.running() ? t('fs.readOnly.running') : t('fs.readOnly.cd');
+  const mode = $('files-mode');
+  mode.classList.toggle('vms', vms);
+  mode.textContent = vms ? t('fs.mode.vms', { user: state.session.user }) : t(ro ? 'fs.mode.readonly' : 'fs.mode.direct');
   $('files-connect').hidden = vms || !ctx.running();
   $('files-disconnect').hidden = !vms;
 
@@ -681,6 +686,7 @@ export function filesTcp(msg) {
     state.session?.feed(msg.bytes);
     return;
   }
+  if (msg.ip) state.sessionIp = msg.ip;
   if (msg.state === 'open') connectWait?.resolve();
   if (msg.state !== 'closed') return;
   connectWait?.reject(new Error('fs.vmsNoNet|'));
@@ -704,13 +710,16 @@ function dropSession() {
 }
 
 /** Demande le compte, ouvre la connexion telnet cachée et s'y connecte. */
-async function connectVms() {
+async function connectVms(error = '') {
   const dlg = $('files-login');
   $('files-login-password').value = '';
+  // Un échec ramène ici, avec sa raison : on ne reste pas en lecture seule sans le voir.
+  $('files-login-error').textContent = error;
+  $('files-login-error').hidden = !error;
   const ok = await new Promise((resolve) => {
     dlg.returnValue = '';
     dlg.onclose = () => resolve(dlg.returnValue === 'ok');
-    dlg.showModal();
+    if (!dlg.open) dlg.showModal();
     $('files-login-password').focus();
   });
   const user = $('files-login-user').value;
@@ -737,6 +746,7 @@ async function connectVms() {
     s.closed();
     ctx.worker()?.postMessage({ type: 'tcpClose', ch: VMS_CHANNEL });
     status(errorText(e), true);
+    connectVms(errorText(e));
     return;
   }
   await openFiles(state.unit);
@@ -838,7 +848,7 @@ export function initFiles(context) {
     status('');
   });
   $('files-button').addEventListener('click', () => openFiles());
-  $('files-connect').addEventListener('click', connectVms);
+  $('files-connect').addEventListener('click', () => connectVms());
   $('files-disconnect').addEventListener('click', () => {
     dropSession();
     openFiles(state.unit);
