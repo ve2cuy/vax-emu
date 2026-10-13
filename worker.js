@@ -6,7 +6,7 @@
 // turbo {on} (quand le VAX travaille — calcul, disques, console —, le temps simulé va aussi
 // vite que le fureteur le permet; quand il attend sans rien faire, retour au temps réel), speed {factor} (vitesse du processeur : ×1 = 10 MIPS; pas encore offerte dans la page :
 // le fureteur plafonne vers 16 MIPS et la boucle d'attente de VMS n'est pas reconnue),
-// vkey {code, state}, vmouse {x, y, buttons} (clavier et souris de l'écran graphique; start
+// vkey {code, state}, vmouse {x, y, buttons}, vbuttons {buttons} (clavier et souris de l'écran graphique; start
 // {qvss: true} installe la carte monochrome, {qdss: octets du ROM vcb02} la carte couleur; le fil envoie video {y, h, pixels} pour les lignes
 // changées et bell quand la cloche du clavier sonne),
 // tcpOpen {port, ch} (connexion TCP de la page vers le VAX sur le canal `ch` : 0, l'onglet
@@ -26,8 +26,8 @@
 // Disques : fichiers de l'OPFS (dossier « disks »), ouverts en accès synchrone et branchés
 // sur les lecteurs MSCP (disks : [{unit, drive, file}]).
 
-import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=35003211';
-import { fsRun, fsError } from './fs-ops.js?v=35003211';
+import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=93d1248c';
+import { fsRun, fsError } from './fs-ops.js?v=93d1248c';
 
 const version = new URL(import.meta.url).search; // ?v=… transmis par la page
 let ready = null;
@@ -45,6 +45,7 @@ let bridgeUrl = null;
 let turbo = false;
 let video = false;       // carte graphique QVSS installée
 let videoTime = 0;
+let mouseAt = null;     // dernière position de la souris donnée au VAX
 const VIDEO_MS = 33;     // au plus 30 images par seconde vers la page
 const tcps = new Map();  // canal -> {id, state} : connexions TCP de la page vers le VAX
 let burst = false;       // Turbo : en rafale (temps simulé détaché du temps réel)
@@ -364,6 +365,11 @@ self.onmessage = async (e) => {
         break;
       case 'vmouse':
         emu?.video_mouse(msg.x, msg.y, msg.buttons);
+        mouseAt = [msg.x, msg.y];
+        break;
+      case 'vbuttons':
+        // Boutons seuls (relâchés quand la page perd la souris) : le pointeur ne bouge pas.
+        if (mouseAt) emu?.video_mouse(mouseAt[0], mouseAt[1], msg.buttons);
         break;
       case 'tcpOpen':
         if (emu) {

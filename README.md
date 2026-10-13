@@ -206,6 +206,9 @@ appears next to Console and Telnet: OpenVMS shows DECwindows Motif there.
   boot. The page downloads the card's ROM (`vcb02.bin`) from the SIMH project.
 - Click in the screen to type. The VAX pointer follows the page's pointer; the three
   mouse buttons are passed on.
+- Caps Lock acts on letters without being sent to the VAX, and held keys are released when
+  the page loses the keyboard (Alt+Tab, screenshots): otherwise DECwindows would believe
+  Shift or Alt is down and its windows would stop reacting to clicks.
 - Keys: F1 to F12, the arrows, Insert, Delete, Home, End and Page Up/Down are the LK201
   editing keys; Alt is Compose; Escape stands for F11.
 - OpenVMS must be installed with DECwindows support (base and workstation) and the

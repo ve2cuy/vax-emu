@@ -4,10 +4,10 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=35003211';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=35003211';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=93d1248c';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=93d1248c';
 
-const VERSION = '0.7.1';
+const VERSION = '0.7.2';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -1190,13 +1190,43 @@ async function qdssRom() {
 function clearScreen() {
   screenCtx.fillStyle = '#000';
   screenCtx.fillRect(0, 0, 1024, 864);
+  screenDown.clear();
+}
+
+// Touches enfoncées sur le clavier du VAX. Si la page perd le clavier pendant qu'une touche
+// est tenue (Alt+Tab, capture d'écran par Win+Maj+S…), son relâchement n'arrive jamais :
+// pour le VAX, Maj ou Alt resterait enfoncée, et le gestionnaire de fenêtres de DECwindows
+// ne réagit plus aux clics (il n'attend que des clics sans modificateur).
+const screenDown = new Set();
+
+function vkey(code, state) {
+  if (state === 1) screenDown.delete(code);
+  else screenDown.add(code);
+  worker?.postMessage({ type: 'vkey', code, state });
+}
+
+function screenRelease() {
+  for (const code of [...screenDown]) vkey(code, 1);
+  if (running) worker?.postMessage({ type: 'vbuttons', buttons: 0 });
 }
 
 function screenKey(e) {
   if (!running) return;
   // Les raccourcis du fureteur (F5, Ctrl+W…) ne doivent pas agir pendant qu'on tape au VAX.
   e.preventDefault();
-  worker?.postMessage({ type: 'vkey', code: e.code, state: e.type === 'keyup' ? 1 : e.repeat ? 2 : 0 });
+  // Verrouillage des majuscules : jamais transmis (l'état du VAX et celui de l'hôte se
+  // désaccorderaient, et le verrou actif bloque aussi le gestionnaire de fenêtres). La
+  // page l'applique elle-même aux lettres, par la touche Maj.
+  if (e.code === 'CapsLock') return;
+  if (e.type === 'keyup') {
+    vkey(e.code, 1);
+    return;
+  }
+  const caps = /^Key[A-Z]$/.test(e.code) && e.getModifierState('CapsLock')
+    && !screenDown.has('ShiftLeft') && !screenDown.has('ShiftRight');
+  if (caps) worker?.postMessage({ type: 'vkey', code: 'ShiftLeft', state: 0 });
+  vkey(e.code, e.repeat ? 2 : 0);
+  if (caps) worker?.postMessage({ type: 'vkey', code: 'ShiftLeft', state: 1 });
 }
 
 function screenPointer(e) {
@@ -1213,6 +1243,9 @@ screenBox.addEventListener('keydown', screenKey);
 screenBox.addEventListener('keyup', screenKey);
 screenBox.addEventListener('pointermove', screenPointer);
 screenBox.addEventListener('pointerup', screenPointer);
+screenBox.addEventListener('pointercancel', screenRelease);
+screenBox.addEventListener('blur', screenRelease);
+window.addEventListener('blur', screenRelease);
 screenBox.addEventListener('pointerdown', (e) => {
   screenBox.focus();
   screenBox.setPointerCapture(e.pointerId);

@@ -219,6 +219,9 @@ alors à côté de Console et Telnet : OpenVMS y affiche DECwindows Motif.
   l'amorçage. La page télécharge le ROM de la carte (`vcb02.bin`) du projet SIMH.
 - Cliquez dans l'écran pour y taper. Le pointeur du VAX suit celui de la page; les trois
   boutons de la souris sont transmis.
+- Le verrouillage des majuscules agit sur les lettres sans être transmis au VAX, et les
+  touches tenues sont relâchées quand la page perd le clavier (Alt+Tab, capture d'écran) :
+  sinon DECwindows croirait Maj ou Alt enfoncée et ses fenêtres ne réagiraient plus aux clics.
 - Touches : F1 à F12, les flèches, Inser, Suppr, Début, Fin et Page préc./suiv. sont les
   touches d'édition du LK201; Alt est Compose; Échap vaut F11.
 - OpenVMS doit être installé avec le support DECwindows (de base et station de travail)
