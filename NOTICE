@@ -71,9 +71,10 @@ No DEC firmware (console ROM, NVR), DEC diagnostic, or OpenVMS software is
 included in this repository. The web page only links to third-party sources.
 
 -------------------------------------------------------------------------------
-The QVSS graphics card with its serial port, keyboard and mouse
-(crates/machine/src/vc.rs) is translated to Rust from SIMH VAX/vax_vc.c,
-vax_2681.c, vax_lk.c and vax_vs.c, under the following terms:
+The QVSS and QDSS graphics cards with their serial port, keyboard and mouse
+(crates/machine/src/vc.rs, va.rs and duart.rs) are translated to Rust from SIMH
+VAX/vax_vc.c, vax_va.c, vax_gpx.c, vax_2681.c, vax_lk.c and vax_vs.c, under the
+following terms:
 
    Copyright (c) 2011-2013, Matt Burke
 

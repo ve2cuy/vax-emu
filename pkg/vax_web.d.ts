@@ -34,6 +34,11 @@ export class Emulator {
      */
     load_nvr(data: Uint8Array): void;
     /**
+     * ROM de la carte QDSS (vcb02.bin, 16 Ko) : la console du KA655 et le pilote
+     * d'OpenVMS s'en servent. À donner après `set_qdss(true)`.
+     */
+    load_qdss_rom(data: Uint8Array): void;
+    /**
      * Charge le ROM de la console; `server` : modèle VAXserver plutôt que MicroVAX.
      */
     load_rom(data: Uint8Array, server: boolean): void;
@@ -90,6 +95,11 @@ export class Emulator {
      * BREAK : arrêt vers le microprogramme de la console (si permis).
      */
     send_break(): void;
+    /**
+     * Avant `power_up` : installe la carte graphique couleur QDSS (« GPX », 256 couleurs)
+     * à la place du QVSS.
+     */
+    set_qdss(on: boolean): void;
     /**
      * Avant `power_up` : installe la carte graphique QVSS avec clavier et souris (la
      * machine devient une VAXstation 3900; OpenVMS y affiche DECwindows).
@@ -215,6 +225,7 @@ export interface InitOutput {
     readonly emulator_drive_types: () => [number, number];
     readonly emulator_flush_disks: (a: number) => void;
     readonly emulator_load_nvr: (a: number, b: number, c: number) => void;
+    readonly emulator_load_qdss_rom: (a: number, b: number, c: number) => void;
     readonly emulator_load_rom: (a: number, b: number, c: number, d: number) => void;
     readonly emulator_net_close: (a: number, b: number) => void;
     readonly emulator_net_connect: (a: number, b: number) => number;
@@ -230,6 +241,7 @@ export interface InitOutput {
     readonly emulator_power_up: (a: number) => void;
     readonly emulator_run: (a: number, b: number, c: number) => number;
     readonly emulator_send_break: (a: number) => void;
+    readonly emulator_set_qdss: (a: number, b: number) => void;
     readonly emulator_set_qvss: (a: number, b: number) => void;
     readonly emulator_set_speed: (a: number, b: number) => void;
     readonly emulator_set_time: (a: number, b: number, c: number) => void;

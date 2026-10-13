@@ -4,10 +4,10 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=6ac194fd';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=6ac194fd';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=928610d7';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=928610d7';
 
-const VERSION = '0.6.1';
+const VERSION = '0.7.0';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -36,7 +36,9 @@ const prefs = {
   open: ['machine'], // sections ouvertes du menu
   lang: null,        // langue de l'interface (null : celle du fureteur)
   mem: 64,           // mémoire (Mo)
-  model: 'microvax', // 'microvax', 'server' ou 'station' (VAXstation : carte graphique QVSS)
+  // 'microvax', 'server', 'station' (VAXstation : carte graphique monochrome QVSS) ou 'gpx'
+  // (carte couleur QDSS : la console passe sur l'écran graphique).
+  model: 'microvax',
   fontSize: 16,
   fontFamily: '',    // police du terminal ('' : celle par défaut)
   keyBar: null,      // touches à l'écran (null : seulement sur un écran tactile)
@@ -433,7 +435,7 @@ function updateButtons() {
 }
 
 function modelName() {
-  return t({ server: 'model.server', station: 'model.station' }[prefs.model] ?? 'model.microvax').replace(/\s*[(（].*$/, '');
+  return t({ server: 'model.server', station: 'model.station', gpx: 'model.gpx' }[prefs.model] ?? 'model.microvax').replace(/\s*[(（].*$/, '');
 }
 
 async function powerOn() {
@@ -442,6 +444,12 @@ async function powerOn() {
   term.reset();
   showStatus('status.starting');
   const nvr = await dbGet('nvr');
+  // Carte couleur : il lui faut son ROM (la console du KA655 et OpenVMS s'en servent).
+  let qdssBytes = null;
+  if (prefs.model === 'gpx') {
+    qdssBytes = await qdssRom();
+    if (!qdssBytes) return;
+  }
   keepStorage();
   for (const d of prefs.disks) if (d?.missing) delete d.missing;   // revérifié par le fil
   worker = new Worker(`worker.js${V}`, { type: 'module' });
@@ -456,12 +464,15 @@ async function powerOn() {
     mem: prefs.mem,
     server: prefs.model === 'server',
     qvss: prefs.model === 'station',
+    qdss: qdssBytes,
     disks: prefs.disks.flatMap((d, unit) => (d?.file ? [{ unit, drive: d.drive, file: d.file }] : [])),
     bridge: prefs.netMode === 'bridge' ? prefs.bridgeUrl : null,
     turbo: prefs.turbo,
   });
   showNet(prefs.netMode === 'bridge' ? 'connecting' : 'virtual');
   clearScreen();
+  // Modèle couleur : la console est sur l'écran graphique.
+  if (prefs.model === 'gpx') showTab('screen');
   running = true;
   filesPowerChanged();
   prefs.power = true;
@@ -1144,9 +1155,37 @@ tabScreen.addEventListener('click', () => showTab('screen'));
 // et la souris de la page vont au clavier LK201 et à la souris du VAX. Le pointeur du VAX
 // suit celui de la page : la carte lui envoie les déplacements qui l'en rapprochent.
 function showScreenTab() {
-  const on = prefs.model === 'station';
+  const on = prefs.model === 'station' || prefs.model === 'gpx';
   tabScreen.hidden = !on;
   if (!on && tabScreen.classList.contains('active')) showTab(false);
+}
+
+const QDSS_ROM_SIZE = 16384;
+const SIMH_QDSS_ROM_URL = 'https://raw.githubusercontent.com/simh/simh/master/VAX/vcb02.bin';
+
+/**
+ * ROM de la carte couleur QDSS (vcb02.bin) : gardé par le fureteur, sinon pris du dossier
+ * de développement, sinon téléchargé du projet SIMH comme le ROM de la console.
+ */
+async function qdssRom() {
+  const saved = await dbGet('vcb02');
+  if (saved?.length === QDSS_ROM_SIZE) return new Uint8Array(saved);
+  showStatus('qdss.rom.downloading');
+  let why = '';
+  for (const url of [`roms/local/vcb02.bin${V}`, SIMH_QDSS_ROM_URL]) {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const bytes = new Uint8Array(await r.arrayBuffer());
+      if (bytes.length !== QDSS_ROM_SIZE) throw new Error(t('rom.bad', { name: 'vcb02.bin' }));
+      await dbPut('vcb02', bytes);
+      return bytes;
+    } catch (e) {
+      why = e.message ?? String(e);
+    }
+  }
+  showStatus('qdss.rom.fail', { msg: why });
+  return null;
 }
 
 /** VAX allumé : écran noir tant que rien n'est dessiné. */

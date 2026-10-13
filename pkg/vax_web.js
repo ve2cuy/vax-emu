@@ -92,6 +92,16 @@ export class Emulator {
         wasm.emulator_load_nvr(this.__wbg_ptr, ptr0, len0);
     }
     /**
+     * ROM de la carte QDSS (vcb02.bin, 16 Ko) : la console du KA655 et le pilote
+     * d'OpenVMS s'en servent. À donner après `set_qdss(true)`.
+     * @param {Uint8Array} data
+     */
+    load_qdss_rom(data) {
+        const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.emulator_load_qdss_rom(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
      * Charge le ROM de la console; `server` : modèle VAXserver plutôt que MicroVAX.
      * @param {Uint8Array} data
      * @param {boolean} server
@@ -233,6 +243,14 @@ export class Emulator {
      */
     send_break() {
         wasm.emulator_send_break(this.__wbg_ptr);
+    }
+    /**
+     * Avant `power_up` : installe la carte graphique couleur QDSS (« GPX », 256 couleurs)
+     * à la place du QVSS.
+     * @param {boolean} on
+     */
+    set_qdss(on) {
+        wasm.emulator_set_qdss(this.__wbg_ptr, on);
     }
     /**
      * Avant `power_up` : installe la carte graphique QVSS avec clavier et souris (la
@@ -671,18 +689,18 @@ function __wbg_get_imports() {
         __wbg___wbindgen_throw_41e9ee4f547fc59a: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
-        __wbg_flush_2baa9541669fea91: function(arg0) {
+        __wbg_flush_4e53d8068ba0befc: function(arg0) {
             arg0.flush();
         },
-        __wbg_read_1c0e27fabd8d36a4: function(arg0, arg1, arg2, arg3) {
+        __wbg_read_d2069fbf4a87b2ba: function(arg0, arg1, arg2, arg3) {
             const ret = arg0.read(arg1, getArrayU8FromWasm0(arg2, arg3));
             return ret;
         },
-        __wbg_size_79377b15eb7bb7ef: function(arg0) {
+        __wbg_size_54e5a2230ab03e28: function(arg0) {
             const ret = arg0.size();
             return ret;
         },
-        __wbg_write_0e04f563c8badbc0: function(arg0, arg1, arg2, arg3) {
+        __wbg_write_bffb0cfad3e084f1: function(arg0, arg1, arg2, arg3) {
             const ret = arg0.write(arg1, getArrayU8FromWasm0(arg2, arg3));
             return ret;
         },

@@ -7,7 +7,7 @@
 // vite que le fureteur le permet; quand il attend sans rien faire, retour au temps réel), speed {factor} (vitesse du processeur : ×1 = 10 MIPS; pas encore offerte dans la page :
 // le fureteur plafonne vers 16 MIPS et la boucle d'attente de VMS n'est pas reconnue),
 // vkey {code, state}, vmouse {x, y, buttons} (clavier et souris de l'écran graphique; start
-// {qvss: true} installe la carte; le fil envoie video {y, h, pixels} pour les lignes
+// {qvss: true} installe la carte monochrome, {qdss: octets du ROM vcb02} la carte couleur; le fil envoie video {y, h, pixels} pour les lignes
 // changées et bell quand la cloche du clavier sonne),
 // tcpOpen {port, ch} (connexion TCP de la page vers le VAX sur le canal `ch` : 0, l'onglet
 // Telnet; 1, la session du gestionnaire de fichiers; répond tcpState {ch, state, ip} puis
@@ -26,8 +26,8 @@
 // Disques : fichiers de l'OPFS (dossier « disks »), ouverts en accès synchrone et branchés
 // sur les lecteurs MSCP (disks : [{unit, drive, file}]).
 
-import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=6ac194fd';
-import { fsRun, fsError } from './fs-ops.js?v=6ac194fd';
+import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=928610d7';
+import { fsRun, fsError } from './fs-ops.js?v=928610d7';
 
 const version = new URL(import.meta.url).search; // ?v=… transmis par la page
 let ready = null;
@@ -308,7 +308,10 @@ self.onmessage = async (e) => {
         closeDisks();
         emu = new Emulator(msg.mem);
         emu.set_qvss(!!msg.qvss);
-        video = !!msg.qvss;
+        // Carte couleur : msg.qdss est son ROM (vcb02.bin).
+        emu.set_qdss(!!msg.qdss);
+        if (msg.qdss) emu.load_qdss_rom(msg.qdss);
+        video = !!msg.qvss || !!msg.qdss;
         videoTime = 0;
         tcps.clear();
         for (const d of msg.disks ?? []) {

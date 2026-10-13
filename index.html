@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=6ac194fd">
-  <link rel="stylesheet" href="style.css?v=6ac194fd">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=928610d7">
+  <link rel="stylesheet" href="style.css?v=928610d7">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -113,6 +113,7 @@
                 <option value="microvax" data-i18n="model.microvax">MicroVAX 3900</option>
                 <option value="server" data-i18n="model.server">VAXserver 3900</option>
                 <option value="station" data-i18n="model.station">VAXstation 3900 (graphics screen)</option>
+                <option value="gpx" data-i18n="model.gpx">VAXstation 3900/GPX (color screen)</option>
               </select>
             </label>
             <p class="hint" data-i18n="machine.next">Memory and model take effect at the next power-on.</p>
@@ -533,7 +534,7 @@
       </div>
     </form>
   </dialog>
-  <script src="vendor/xterm/xterm.js?v=6ac194fd"></script>
-  <script type="module" src="main.js?v=6ac194fd"></script>
+  <script src="vendor/xterm/xterm.js?v=928610d7"></script>
+  <script type="module" src="main.js?v=928610d7"></script>
 </body>
 </html>
