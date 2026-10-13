@@ -233,22 +233,25 @@ SYSTEM SHUTDOWN COMPLETE      ! alors seulement : bouton Arrêt (&gt;&gt;&gt;) o
   </div>
 
   <h3>Changer l'adresse, la passerelle, le DNS ou le nom</h3>
+  <p>Si la commande <code>NETCONFIG</code> est installée sur votre disque (« Net Config by VE2CUY », procédure <code>SYS$MANAGER:NETCONFIG.COM</code>), elle fait tout ce qui suit : elle demande l'adresse, le masque, la passerelle et les serveurs DNS, valide les réponses, redémarre le réseau, puis teste la passerelle et le DNS par un ping. À la main :</p>
   <p>Modifiez <code>CMUIP_ROOT:[SYSMGR]INTERNET.CONFIG</code> avec <code>EDIT/TPU CMUIP_ROOT:[SYSMGR]INTERNET.CONFIG</code> (<kbd>Ctrl+Z</kbd> enregistre). C'est ce fichier que lit IPACP. N'écrivez pas plutôt dans <code>SYS$MANAGER:</code> : un nouveau fichier y irait dans <code>SYS$SPECIFIC</code> et IPACP ne le verrait pas.</p>
 <pre>! Adresse et masque (carte XQA0) :
 Device_Init:XEDRV:XQA0:00-00-00-00-00-00:192.168.2.77:255.255.255.0
 
 ! Passerelle par défaut (réseau 0.0.0.0, masque 0.0.0.0) : une ligne par passerelle
 Gateway:ROUTER:192.168.2.1:0.0.0.0:0.0.0.0</pre>
-  <p>Pour les serveurs de noms (DNS), modifiez <code>CMUIP_ROOT:[SYSMGR]NAMRES.CONFIG</code>. Le format vient des commentaires du fichier; je ne l'ai pas encore essayé avec un vrai serveur :</p>
-<pre>! Domain_Server:domaine:nom-du-serveur:adresse:port
-Domain_Server:.:ROUTER:192.168.2.1:53
-! Suffixe ajouté aux noms courts
-Domain_Suffix:maison.local</pre>
+  <p>Pour les serveurs de noms (DNS), modifiez <code>CMUIP_ROOT:[SYSMGR]NAMRES.CONFIG</code> (essayé avec un routeur et 8.8.8.8) :</p>
+<pre>! Domain_Server:domaine:nom-du-serveur:adresse:port   (« . » : tous les domaines)
+Domain_Server:.:DNS1:192.168.2.1:53
+Domain_Server:.:DNS2:8.8.8.8:53</pre>
   <p>Pour le nom d'hôte, changez la ligne <code>Define/System/Exec/NoLog INTERNET_HOST_NAME "VAXEMU.LOCAL"</code> de <code>CMUIP_ROOT:[SYSMGR]IP_STARTUP.COM</code>.</p>
   <p><strong>Appliquer les changements sans redémarrer VMS</strong> (essayé dans l'émulateur) :</p>
-<pre>$ IPNCP NETEXIT                ! puis attendre le message « IPACP: Network offline » (≈ 10 s)
+<pre>$ IPNCP NAMRES EXIT 1          ! arrêter d'abord le résolveur de noms (sinon il plante)
+$ IPNCP NETEXIT                ! puis attendre le message « IPACP: Network offline » (≈ 10 s)
 $ @SYS$MANAGER:IP_STARTUP      ! « IPACP: Net device 0 is XQA0:, IP=... (Online) »
-$ IPNCP PING 192.168.2.1 64 3  ! vérifier</pre>
+$ IPNCP STARTUP /NAMRES        ! si NAMRES n'est pas reparti (SHOW SYSTEM)
+$ IPNCP PING 192.168.2.1 64 3  ! vérifier la passerelle
+$ IPNCP PING GOOGLE.COM 64 3   ! vérifier le DNS</pre>
   <p class="muted">Vous pouvez aussi redémarrer VMS (<code>@SYS$SYSTEM:SHUTDOWN</code>, redémarrage automatique YES). Pour tout reprendre, relancez <code>@SYS$UPDATE:VMSINSTAL CMUIP</code> depuis la trousse.</p>
   <div class="note"><strong>Dans l'émulateur</strong>, voici les adresses selon le mode réseau :
     <ul>
@@ -442,22 +445,25 @@ SYSTEM SHUTDOWN COMPLETE      ! only then: Halt button (&gt;&gt;&gt;) or Power o
   </div>
 
   <h3>Changing the address, gateway, DNS or name</h3>
+  <p>If the <code>NETCONFIG</code> command is installed on your disk ("Net Config by VE2CUY", procedure <code>SYS$MANAGER:NETCONFIG.COM</code>), it does all of the following: it asks for the address, mask, gateway and DNS servers, validates the answers, restarts the network, then tests the gateway and the DNS with a ping. By hand:</p>
   <p>Edit <code>CMUIP_ROOT:[SYSMGR]INTERNET.CONFIG</code> with <code>EDIT/TPU CMUIP_ROOT:[SYSMGR]INTERNET.CONFIG</code> (<kbd>Ctrl+Z</kbd> saves). This is the file IPACP reads. Do not write to <code>SYS$MANAGER:</code> instead: a new file would go to <code>SYS$SPECIFIC</code>, which IPACP never sees.</p>
 <pre>! Address and mask (card XQA0):
 Device_Init:XEDRV:XQA0:00-00-00-00-00-00:192.168.2.77:255.255.255.0
 
 ! Default gateway (network 0.0.0.0, mask 0.0.0.0): one line per gateway
 Gateway:ROUTER:192.168.2.1:0.0.0.0:0.0.0.0</pre>
-  <p>For name servers (DNS), edit <code>CMUIP_ROOT:[SYSMGR]NAMRES.CONFIG</code>. This format comes from the file's comments; I have not yet tried it with a real server:</p>
-<pre>! Domain_Server:domain:server-name:address:port
-Domain_Server:.:ROUTER:192.168.2.1:53
-! Suffix added to short names
-Domain_Suffix:home.local</pre>
+  <p>For name servers (DNS), edit <code>CMUIP_ROOT:[SYSMGR]NAMRES.CONFIG</code> (tried with a router and 8.8.8.8):</p>
+<pre>! Domain_Server:domain:server-name:address:port   ("." : every domain)
+Domain_Server:.:DNS1:192.168.2.1:53
+Domain_Server:.:DNS2:8.8.8.8:53</pre>
   <p>For the host name, change the line <code>Define/System/Exec/NoLog INTERNET_HOST_NAME "VAXEMU.LOCAL"</code> in <code>CMUIP_ROOT:[SYSMGR]IP_STARTUP.COM</code>.</p>
   <p><strong>Apply the changes without rebooting VMS</strong> (tried in the emulator):</p>
-<pre>$ IPNCP NETEXIT                ! then wait for "IPACP: Network offline" (≈ 10 s)
+<pre>$ IPNCP NAMRES EXIT 1          ! stop the name resolver first (otherwise it crashes)
+$ IPNCP NETEXIT                ! then wait for "IPACP: Network offline" (≈ 10 s)
 $ @SYS$MANAGER:IP_STARTUP      ! "IPACP: Net device 0 is XQA0:, IP=... (Online)"
-$ IPNCP PING 192.168.2.1 64 3  ! check</pre>
+$ IPNCP STARTUP /NAMRES        ! if NAMRES did not restart (SHOW SYSTEM)
+$ IPNCP PING 192.168.2.1 64 3  ! check the gateway
+$ IPNCP PING GOOGLE.COM 64 3   ! check the DNS</pre>
   <p class="muted">You can also reboot VMS (<code>@SYS$SYSTEM:SHUTDOWN</code>, automatic reboot YES). To start over, run <code>@SYS$UPDATE:VMSINSTAL CMUIP</code> again from the kit.</p>
   <div class="note"><strong>In the emulator</strong>, these are the addresses for each network mode:
     <ul>
