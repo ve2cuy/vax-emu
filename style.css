@@ -1125,6 +1125,17 @@ button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--error)
 .terminal .xterm .xterm-viewport { scrollbar-width: thin; scrollbar-color: #666 #000; }
 .terminal .xterm:focus-within { box-shadow: 0 0 0 2px var(--accent); border-radius: 4px; }
 .stage > .status { width: auto; max-width: 100%; }
+
+/* Barre de touches à l'écran (téléphone, tablette) : Ctrl, Esc, flèches, PF1-PF4. */
+.stage > .key-bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; width: auto; max-width: 100%; margin-top: 10px; }
+.stage > .key-bar[hidden] { display: none; }
+.key-bar button { min-width: 44px; min-height: 40px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--text); font: 0.9rem ui-monospace, Consolas, monospace; cursor: pointer;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.key-bar button:active { background: var(--accent-soft); }
+.key-bar button.armed { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+.key-bar .gap { width: 8px; }
+label.check { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.88rem; }
 .overlay[hidden] { display: none; }
 
 /* ---------------------------------------------------------------- VAX : disques */

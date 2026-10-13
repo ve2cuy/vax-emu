@@ -6,7 +6,7 @@
 
 import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js';
 
-const VERSION = '0.3.1';
+const VERSION = '0.3.2';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -38,6 +38,7 @@ const prefs = {
   model: 'microvax', // 'microvax' ou 'server'
   fontSize: 16,
   fontFamily: '',    // police du terminal ('' : celle par défaut)
+  keyBar: null,      // touches à l'écran (null : seulement sur un écran tactile)
   power: true,       // allumer au chargement de la page (si un ROM est gardé)
   // Lecteurs MSCP DUA0-DUA3 : { drive, file (nom dans l'OPFS), name (nom d'origine), size }.
   disks: [null, null, null, null],
@@ -350,7 +351,7 @@ term.onData((data) => {
     return;
   }
   // Retour arrière de xterm (DEL) : c'est aussi la touche d'effacement du VT.
-  sendBytes(stringToBytes(data));
+  sendBytes(stringToBytes(withCtrl(data)));
 });
 
 function sendBytes(bytes) {
@@ -794,6 +795,40 @@ async function removeFile(file) {
  * Copie un flux dans l'OPFS (avec la progression), puis le branche sur `unit` (type de
  * lecteur `drive`, sinon celui du lecteur; RRD40 pour un .iso). Rend vrai si réussi.
  */
+/**
+ * Ouvre `file` (dossier des disques de l'OPFS) en écriture, vidé. Safari d'iOS et d'iPadOS
+ * (avant la version 26) n'a pas createWritable() : un fil y écrit par un accès synchrone.
+ */
+async function openWriter(file) {
+  const fh = await (await diskDir()).getFileHandle(file, { create: true });
+  if (typeof fh.createWritable === 'function') {
+    const out = await fh.createWritable();
+    return { write: (chunk) => out.write(chunk), close: () => out.close() };
+  }
+  const writer = new Worker(new URL('./opfs-writer.js', import.meta.url));
+  const ask = (msg, transfer = []) => new Promise((resolve, reject) => {
+    writer.onmessage = ({ data }) => (data.ok ? resolve() : reject(new Error(data.msg)));
+    writer.onerror = (e) => reject(new Error(e.message || 'opfs-writer.js'));
+    writer.postMessage(msg, transfer);
+  });
+  try {
+    await ask({ type: 'open', file });
+  } catch (e) {
+    writer.terminate();
+    throw e;
+  }
+  return {
+    write: (chunk) => {
+      // Copie : le bloc d'origine peut être la vue d'un tampon plus grand.
+      const copy = chunk.slice();
+      return ask({ type: 'write', chunk: copy }, [copy.buffer]);
+    },
+    close: async () => {
+      try { await ask({ type: 'close' }); } finally { writer.terminate(); }
+    },
+  };
+}
+
 async function importStream(unit, name, size, stream, drive = null) {
   let ok = false;
   diskBusy = true;
@@ -804,8 +839,7 @@ async function importStream(unit, name, size, stream, drive = null) {
     const file = opfsName(unit, name);
     const old = prefs.disks[unit]?.file;
     if (old && old !== file) await removeFile(old);
-    const fh = await (await diskDir()).getFileHandle(file, { create: true });
-    const out = await fh.createWritable();
+    const out = await openWriter(file);
     const reader = stream.getReader();
     let done = 0;
     let shown = -1;
@@ -814,7 +848,7 @@ async function importStream(unit, name, size, stream, drive = null) {
       if (end) break;
       await out.write(value);
       done += value.length;
-      const pct = size ? Math.floor((done * 100) / size) : 0;
+      const pct = size ? Math.min(100, Math.floor((done * 100) / size)) : 0;
       if (pct !== shown) {
         shown = pct;
         showStatus('disk.importing', { name, pct });
@@ -839,8 +873,28 @@ async function importStream(unit, name, size, stream, drive = null) {
 diskFile.addEventListener('change', () => {
   const file = diskFile.files[0];
   diskFile.value = '';
-  if (file) importStream(importUnit, file.name, file.size, file.stream());
+  if (file) importLocal(importUnit, file);
 });
+
+/**
+ * Fichier choisi sur l'appareil. Une image compressée (.gz, par exemple téléchargée du
+ * dépôt) est décompressée en la copiant : sa taille réelle est dans ses quatre derniers
+ * octets.
+ */
+async function importLocal(unit, file) {
+  try {
+    const head = new Uint8Array(await file.slice(0, 2).arrayBuffer());
+    if (head[0] !== 0x1f || head[1] !== 0x8b) {
+      await importStream(unit, file.name, file.size, file.stream());
+      return;
+    }
+    const tail = new DataView(await file.slice(-4).arrayBuffer());
+    const stream = await maybeGunzip(file.stream());
+    await importStream(unit, file.name.replace(/\.gz$/i, ''), tail.getUint32(0, true), stream);
+  } catch (e) {
+    showStatus('error', { msg: e.message ?? String(e) });
+  }
+}
 
 async function blankDisk(unit) {
   const drive = driveOf(unit);
@@ -848,10 +902,7 @@ async function blankDisk(unit) {
   const file = opfsName(unit, name);
   const old = prefs.disks[unit]?.file;
   if (old) await removeFile(old);
-  const fh = await (await diskDir()).getFileHandle(file, { create: true });
-  const out = await fh.createWritable();
-  await out.truncate(0);
-  await out.close();
+  await (await openWriter(file)).close();
   prefs.disks[unit] = { drive, file, name, size: 0 };
   savePrefs();
   showStatus('disk.imported', { name, unit: `DUA${unit}` });
@@ -1042,7 +1093,7 @@ function showTab(telnet) {
     telnetTerm.onData((data) => {
       if (telnetState !== 'open') return;
       // Un octet 255 se double (IAC IAC).
-      telnetSend([...stringToBytes(data)].flatMap((b) => (b === IAC ? [IAC, IAC] : [b])));
+      telnetSend([...stringToBytes(withCtrl(data))].flatMap((b) => (b === IAC ? [IAC, IAC] : [b])));
     });
   }
   if (telnet) {
@@ -1063,6 +1114,103 @@ telnetButton.addEventListener('click', () => {
 });
 fontSize.addEventListener('change', () => { if (telnetTerm) telnetTerm.options.fontSize = prefs.fontSize; });
 showTelnet();
+
+// ------------------------------------------------------------------ touches à l'écran
+
+// Le clavier d'un téléphone ou d'une tablette n'a ni Ctrl, ni Esc, ni flèches : sans eux,
+// impossible de sortir de bien des programmes d'OpenVMS (Ctrl+Z, Ctrl+Y, Ctrl+C).
+const keyBar = document.getElementById('key-bar');
+const keyBarOn = document.getElementById('key-bar-on');
+const touchScreen = window.matchMedia?.('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+let ctrlArmed = false;
+let ctrlButton = null;
+
+function armCtrl(on) {
+  ctrlArmed = on;
+  ctrlButton?.classList.toggle('armed', on);
+  ctrlButton?.setAttribute('aria-pressed', String(on));
+}
+
+/** Ctrl armé : le prochain caractère tapé devient son code de contrôle (Z → Ctrl+Z). */
+function withCtrl(data) {
+  if (!ctrlArmed || data.length !== 1) return data;
+  armCtrl(false);
+  const c = data.toUpperCase().charCodeAt(0);
+  if (c >= 0x40 && c <= 0x5F) return String.fromCharCode(c & 0x1F);
+  if (data === ' ' || data === '2') return '\0';
+  if (data === '?') return '\x7F';
+  return data;
+}
+
+/** Le terminal affiché (console ou telnet). */
+function shownTerm() {
+  return tabTelnet.classList.contains('active') && telnetTerm ? telnetTerm : term;
+}
+
+/** Envoie une touche de la barre au terminal affiché, comme si elle venait du clavier. */
+function typeKey(data) {
+  const target = shownTerm();
+  if (target === telnetTerm) {
+    if (telnetState === 'open') telnetSend([...stringToBytes(data)]);
+  } else if (pilot) {
+    pilot.keyboardLocked();
+  } else if (running) {
+    sendBytes(stringToBytes(data));
+  }
+}
+
+/** Flèche : séquence du mode courant du terminal (curseur ou application, comme un VT100). */
+function arrow(letter) {
+  return () => `\x1B${shownTerm().modes?.applicationCursorKeysMode ? 'O' : '['}${letter}`;
+}
+
+const SCREEN_KEYS = [
+  ['Ctrl', null], ['Esc', '\x1B'], ['Tab', '\t'], null,
+  ['^C', '\x03'], ['^Y', '\x19'], ['^Z', '\x1A'], null,
+  ['←', arrow('D')], ['↑', arrow('A')], ['↓', arrow('B')], ['→', arrow('C')], null,
+  ['PF1', '\x1BOP'], ['PF2', '\x1BOQ'], ['PF3', '\x1BOR'], ['PF4', '\x1BOS'],
+];
+for (const key of SCREEN_KEYS) {
+  if (!key) {
+    const gap = document.createElement('span');
+    gap.className = 'gap';
+    keyBar.append(gap);
+    continue;
+  }
+  const [label, data] = key;
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = label;
+  b.dataset.key = label;
+  // Le terminal garde le focus : le clavier de l'écran reste ouvert.
+  b.addEventListener('pointerdown', (e) => e.preventDefault());
+  b.addEventListener('click', () => {
+    if (data === null) armCtrl(!ctrlArmed);
+    else {
+      armCtrl(false);
+      typeKey(typeof data === 'function' ? data() : data);
+    }
+    shownTerm().focus();
+  });
+  if (data === null) {
+    ctrlButton = b;
+    b.setAttribute('aria-pressed', 'false');
+  }
+  keyBar.append(b);
+}
+
+function showKeyBar() {
+  const on = prefs.keyBar ?? touchScreen;
+  keyBar.hidden = !on;
+  keyBarOn.checked = on;
+  keyBar.setAttribute('aria-label', t('keys.bar.aria'));
+}
+keyBarOn.addEventListener('change', () => {
+  prefs.keyBar = keyBarOn.checked;
+  savePrefs();
+  showKeyBar();
+});
+showKeyBar();
 
 // ------------------------------------------------------------------ réseau
 
@@ -1174,7 +1322,9 @@ async function maybeGunzip(body) {
       return reader.cancel(reason);
     },
   });
-  return head[0] === 0x1f && head[1] === 0x8b ? stream.pipeThrough(new DecompressionStream('gzip')) : stream;
+  if (head[0] !== 0x1f || head[1] !== 0x8b) return stream;
+  if (typeof DecompressionStream !== 'function') throw new Error(t('repo.noGunzip'));
+  return stream.pipeThrough(new DecompressionStream('gzip'));
 }
 
 async function fetchRepo(kind, entry) {

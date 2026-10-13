@@ -75,6 +75,11 @@ Above the screen, the **Telnet** tab opens a telnet session into the VAX in a se
 terminal, next to the console: several logins at once, as on a real system. TCP/IP must be
 running in OpenVMS (the Install TCP/IP button, or the repository's OpenVMS + TCP/IP disk).
 
+On a phone or a tablet, a row of keys appears under the screen: Ctrl (tap it, then a
+letter: Ctrl then Z sends Ctrl+Z), Esc, Tab, Ctrl+C, Ctrl+Y, Ctrl+Z, the arrows and
+PF1-PF4. The Keyboard section shows or hides it on any device. A `.gz` image downloaded
+from the repository can be imported as is: the page decompresses it.
+
 ## Setting up the local bridge
 
 The *vax-bridge* relay runs on the computer where the browser is. It copies Ethernet

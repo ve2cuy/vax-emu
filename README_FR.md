@@ -82,6 +82,12 @@ deuxième terminal, à côté de la console : plusieurs connexions à la fois, c
 système. TCP/IP doit être en marche dans OpenVMS (bouton Installer TCP/IP, ou le disque
 OpenVMS + TCP/IP du dépôt).
 
+Sur un téléphone ou une tablette, une rangée de touches paraît sous l'écran : Ctrl
+(touchez-la, puis une lettre : Ctrl puis Z envoie Ctrl+Z), Esc, Tab, Ctrl+C, Ctrl+Y,
+Ctrl+Z, les flèches et PF1-PF4. La section Clavier la montre ou la cache sur tout
+appareil. Une image `.gz` téléchargée du dépôt s'importe telle quelle : la page la
+décompresse.
+
 ## Mise en place du pont réseau
 
 Le relais *vax-bridge* tourne sur l'ordinateur où se trouve le fureteur. Il copie les
