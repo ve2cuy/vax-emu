@@ -788,13 +788,18 @@ button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--error)
 .files-table .file-name .icon { width: 15px; height: 15px; }
 .files-table .badge { margin-left: 6px; padding: 1px 6px; border-radius: 8px; background: var(--surface-2); color: var(--muted); font-size: 0.74rem; }
 #files-empty { padding: 14px; }
-/* Le texte trouvé par la recherche : un cadre bleu posé sur l'éditeur, à sa position. */
-.files-text-wrap { position: relative; flex: 1; min-height: 10rem; display: flex; overflow: hidden; border-radius: 8px; }
-.files-hit { position: absolute; background: rgb(30 144 255 / 0.6); outline: 2px solid #4da3ff; border-radius: 2px; pointer-events: none; }
-.files-hit[hidden] { display: none; }
+/* Le texte trouvé par la recherche est surligné par une copie du texte placée sous
+   l'éditeur (mêmes police, marges et tabulations, donc exactement alignée) : seuls ses
+   surlignages se voient, le texte lui-même est celui de l'éditeur, dessiné par-dessus. */
+.files-text-wrap { position: relative; flex: 1; min-height: 10rem; display: flex; overflow: hidden; border-radius: 8px; background: #000; }
+.files-back { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.files-back > div { padding: 8px 10px; border: 1px solid transparent; color: transparent; white-space: pre; tab-size: 8;
+  font: 0.86rem/1.35 "DejaVu Sans Mono", "Cascadia Mono", Consolas, monospace; will-change: transform; }
+.files-back mark { color: transparent; background: #24507f; border-radius: 2px; }
+.files-back mark.cur { background: #1e90ff; box-shadow: 0 0 0 1px #7cc0ff; }
 .files-text::selection { background: #1e90ff; color: #fff; }
 .files-text { flex: 1; min-height: 10rem; width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
-  background: #000; color: #d8d8d8; font: 0.86rem/1.35 "DejaVu Sans Mono", "Cascadia Mono", Consolas, monospace; resize: none; white-space: pre; tab-size: 8; }
+  position: relative; background: transparent; color: #d8d8d8; font: 0.86rem/1.35 "DejaVu Sans Mono", "Cascadia Mono", Consolas, monospace; resize: none; white-space: pre; tab-size: 8; }
 /* Barre de défilement de l'éditeur : toujours là, large et contrastée, pour voir où l'on
    est dans un long fichier. */
 .files-text { text-transform: none; overflow: scroll; scrollbar-width: auto; scrollbar-color: #9aa3b2 #1b1e26; scrollbar-gutter: stable; }

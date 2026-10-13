@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=9ba8664d">
-  <link rel="stylesheet" href="style.css?v=9ba8664d">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=47e37503">
+  <link rel="stylesheet" href="style.css?v=47e37503">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -446,9 +446,9 @@
         <span id="files-pos" class="hint"></span>
       </div>
       <div class="files-text-wrap">
+        <div id="files-back" class="files-back" aria-hidden="true"><div id="files-back-text"></div></div>
         <textarea id="files-text" class="files-text" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"
                   aria-label="File content" data-i18n-aria="fs.editor.aria"></textarea>
-        <div id="files-hit" class="files-hit" hidden></div>
       </div>
       <div class="dialog-actions">
         <button id="files-save" type="button" data-i18n="fs.save">Save (new version)</button>
@@ -528,7 +528,7 @@
       </div>
     </form>
   </dialog>
-  <script src="vendor/xterm/xterm.js?v=9ba8664d"></script>
-  <script type="module" src="main.js?v=9ba8664d"></script>
+  <script src="vendor/xterm/xterm.js?v=47e37503"></script>
+  <script type="module" src="main.js?v=47e37503"></script>
 </body>
 </html>

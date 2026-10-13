@@ -5,8 +5,8 @@
 // réécrirait par-dessus nos modifications). VAX en marche, on peut aussi passer par OpenVMS
 // lui-même : une session telnet cachée exécute les opérations (vms-files.js).
 
-import { t } from './i18n.js?v=9ba8664d';
-import { VmsSession, vmsRun, childDir } from './vms-files.js?v=9ba8664d';
+import { t } from './i18n.js?v=47e37503';
+import { VmsSession, vmsRun, childDir } from './vms-files.js?v=47e37503';
 
 let ctx = null;          // { disks(), running(), worker(), version }
 let fsWorker = null;
@@ -418,59 +418,49 @@ function revealAt(index) {
   area.scrollLeft = Math.max(0, col * charWidth - area.clientWidth / 2);
 }
 
-let charWidth = 0;
-
-/** Largeur d'un caractère de l'éditeur (police à chasse fixe). */
-function editorCharWidth(style) {
-  if (!charWidth) {
-    const ctx = document.createElement('canvas').getContext('2d');
-    ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-    charWidth = ctx.measureText('M'.repeat(100)).width / 100;
-  }
-  return charWidth;
-}
-
-/** Colonne à l'écran de la position `col` d'une ligne (les tabulations vont de 8 en 8). */
-function visualColumn(line, col) {
-  let v = 0;
-  for (let i = 0; i < col; i++) v = line[i] === '\t' ? (Math.floor(v / 8) + 1) * 8 : v + 1;
-  return v;
-}
+const escapeHtml = (x) => x.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
 /**
- * Pose le cadre bleu sur l'occurrence courante (ou le cache). Le champ de recherche garde
- * le curseur : sans ce cadre, la sélection d'une zone de texte inactive se voit à peine.
+ * Surligne les occurrences sous l'éditeur : toutes en bleu sombre, la courante en bleu vif.
+ * La copie du texte est mise en page par le fureteur comme l'éditeur lui-même, donc les
+ * surlignages tombent exactement sur les mots, quelles que soient la police et l'échelle.
  */
-function placeHit() {
-  const hit = $('files-hit');
+function paintHits() {
+  const back = $('files-back-text');
   const area = $('files-text');
-  const needle = $('files-find').value;
-  if (find.at < 0 || !needle || $('files-editor').hidden) {
-    hit.hidden = true;
+  const len = $('files-find').value.length;
+  if (!find.hits.length || !len) {
+    back.textContent = '';
     return;
   }
-  const start = find.hits[find.at];
-  const style = getComputedStyle(area);
-  const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.35;
-  const cw = editorCharWidth(style);
-  const lineStart = area.value.lastIndexOf('\n', start - 1) + 1;
-  let lineEnd = area.value.indexOf('\n', start);
-  if (lineEnd < 0) lineEnd = area.value.length;
-  const text = area.value.slice(lineStart, lineEnd);
-  const row = area.value.slice(0, start).split('\n').length - 1;
-  const from = visualColumn(text, start - lineStart);
-  const to = visualColumn(text, Math.min(start - lineStart + needle.length, text.length));
-  const x = parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft) + from * cw - area.scrollLeft;
-  const y = parseFloat(style.borderTopWidth) + parseFloat(style.paddingTop) + row * lineHeight - area.scrollTop;
-  const width = Math.max(cw, (to - from) * cw);
-  // Hors de la partie visible (ou sous les barres de défilement) : pas de cadre.
-  const visible = y >= 0 && y + lineHeight <= area.clientHeight + 2 && x >= 0 && x + width <= area.clientWidth + 2;
-  hit.hidden = !visible;
-  if (!visible) return;
-  hit.style.left = `${x}px`;
-  hit.style.top = `${y}px`;
-  hit.style.width = `${width}px`;
-  hit.style.height = `${lineHeight}px`;
+  const text = area.value;
+  const parts = [];
+  let at = 0;
+  find.hits.forEach((start, k) => {
+    parts.push(escapeHtml(text.slice(at, start)), k === find.at ? '<mark class="cur">' : '<mark>', escapeHtml(text.slice(start, start + len)), '</mark>');
+    at = start + len;
+  });
+  parts.push(escapeHtml(text.slice(at)), '\n');
+  back.innerHTML = parts.join('');
+  syncBack();
+}
+
+/** La copie suit le défilement de l'éditeur. */
+function syncBack() {
+  const area = $('files-text');
+  $('files-back-text').style.transform = `translate(${-area.scrollLeft}px, ${-area.scrollTop}px)`;
+}
+
+/** Change seulement l'occurrence courante (sans refaire toute la copie). */
+function markCurrent() {
+  const marks = $('files-back-text').querySelectorAll('mark');
+  if (marks.length !== find.hits.length) {
+    paintHits();
+    return;
+  }
+  $('files-back-text').querySelector('mark.cur')?.classList.remove('cur');
+  marks[find.at]?.classList.add('cur');
+  syncBack();
 }
 
 /** Cherche (sans tenir compte de la casse) et va à l'occurrence suivante ou précédente. */
@@ -482,7 +472,7 @@ function findInFile(step) {
   if (!needle) {
     find.at = -1;
     count.textContent = '';
-    placeHit();
+    paintHits();
     return;
   }
   const hay = area.value.toLowerCase();
@@ -490,7 +480,7 @@ function findInFile(step) {
   if (!find.hits.length) {
     find.at = -1;
     count.textContent = t('fs.find.none');
-    placeHit();
+    paintHits();
     return;
   }
   if (step === 0) {
@@ -513,7 +503,8 @@ function findInFile(step) {
   const start = find.hits[find.at];
   area.setSelectionRange(start, start + needle.length);
   revealAt(start);
-  placeHit();
+  if (step === 0) paintHits();
+  else markCurrent();
   count.textContent = t('fs.find.count', { n: find.at + 1, total: find.hits.length });
   showPosition();
 }
@@ -523,7 +514,7 @@ function resetFind() {
   $('files-find-count').textContent = '';
   find.hits = [];
   find.at = -1;
-  placeHit();
+  paintHits();
   showPosition();
 }
 
@@ -990,12 +981,11 @@ export function initFiles(context) {
       $('files-find').select();
     }
   });
-  area.addEventListener('scroll', placeHit);
+  area.addEventListener('scroll', syncBack);
   // Le texte change : les positions trouvées ne valent plus, on cherche de nouveau.
   area.addEventListener('input', () => {
     if ($('files-find').value) findInFile(0);
   });
-  window.addEventListener('resize', placeHit);
   $('files-find').addEventListener('input', () => findInFile(0));
   $('files-find').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -1014,7 +1004,7 @@ export function initFiles(context) {
     download(name, [$('files-text').value], 'text/plain');
   });
   $('files-editor-close').addEventListener('click', () => {
-    $('files-hit').hidden = true;
+    $('files-back-text').textContent = '';
     showPane('browse');
     status('');
   });
