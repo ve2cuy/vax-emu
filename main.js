@@ -6,7 +6,7 @@
 
 import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js';
 
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -42,6 +42,7 @@ const prefs = {
   repo: 'https://ve2cuy.com/vax', // dépôt de fichiers (dossiers rom, disk, iso)
   repoKind: 'disk',
   repoPick: {},      // fichier choisi dans chaque dossier du dépôt
+  turbo: false,      // Turbo : le VAX va aussi vite que le fureteur le permet
   netMode: 'virtual', // 'virtual' (réseau virtuel) ou 'bridge' (relais vax-bridge de ce PC)
   bridgeUrl: 'ws://127.0.0.1:8023',
   ...readPrefs(),
@@ -405,6 +406,7 @@ async function powerOn() {
     server: prefs.model === 'server',
     disks: prefs.disks.flatMap((d, unit) => (d?.file ? [{ unit, drive: d.drive, file: d.file }] : [])),
     bridge: prefs.netMode === 'bridge' ? prefs.bridgeUrl : null,
+    turbo: prefs.turbo,
   });
   showNet(prefs.netMode === 'bridge' ? 'connecting' : 'virtual');
   running = true;
@@ -485,6 +487,21 @@ function onWorkerMessage(e) {
       break;
   }
 }
+
+// Turbo : temps simulé détaché du temps réel (installations, démarrages plus rapides).
+const turboButton = document.getElementById('turbo');
+function showTurbo() {
+  turboButton.setAttribute('aria-pressed', String(prefs.turbo));
+  turboButton.classList.toggle('active', prefs.turbo);
+}
+turboButton.addEventListener('click', () => {
+  prefs.turbo = !prefs.turbo;
+  savePrefs();
+  showTurbo();
+  worker?.postMessage({ type: 'turbo', on: prefs.turbo });
+  term.focus();
+});
+showTurbo();
 
 powerButton.addEventListener('click', () => {
   if (running) powerOff(true);

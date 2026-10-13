@@ -12,6 +12,8 @@ const XTERM = '<a href="https://xtermjs.org/" target="_blank" rel="noopener">xte
 
 const STRINGS = {
   en: {
+    "turbo": "Turbo",
+    "turbo.tip": "Turbo: the VAX runs as fast as this browser allows (waits are skipped); the OpenVMS clock runs ahead of the real time while it is on",
     "cheatsheet": "OpenVMS cheat sheet",
     "auto.keyboard": "keyboard locked during the automation (Stop to take over)",
     "auto.tcp.running": "The VAX is running: the installation continues from the console (it is not powered off). The VAX must be at the >>> prompt, the Username: prompt or the $ prompt of SYSTEM; the TCP/IP kit CD replaces the one in DUA1. Continue?",
@@ -188,6 +190,8 @@ const STRINGS = {
     'error': 'Error: {msg}',
   },
   fr: {
+    "turbo": "Turbo",
+    "turbo.tip": "Turbo : le VAX va aussi vite que le permet ce fureteur (les attentes sont sautées); l’horloge d’OpenVMS prend de l’avance sur l’heure réelle tant qu’il est actif",
     "cheatsheet": "Aide-mémoire OpenVMS",
     "auto.keyboard": "clavier bloqué pendant l’automatisation (Arrêter pour reprendre la main)",
     "auto.tcp.running": "Le VAX est en marche : l’installation continue depuis la console (il n’est pas éteint). Le VAX doit être à l’invite >>>, à l’invite Username: ou à l’invite $ de SYSTEM; le CD de la trousse TCP/IP remplace celui de DUA1. Continuer?",
@@ -364,6 +368,8 @@ const STRINGS = {
     'error': 'Erreur : {msg}',
   },
   es: {
+    "turbo": "Turbo",
+    "turbo.tip": "Turbo: el VAX va tan rápido como lo permite este navegador (se saltan las esperas); el reloj de OpenVMS se adelanta a la hora real mientras está activo",
     "cheatsheet": "Guía rápida de OpenVMS (en inglés)",
     "auto.keyboard": "teclado bloqueado durante la automatización (Detener para retomar el control)",
     "auto.tcp.running": "El VAX está en marcha: la instalación continúa desde la consola (no se apaga). El VAX debe estar en el indicador >>>, en Username: o en el indicador $ de SYSTEM; el CD del kit TCP/IP reemplaza al de DUA1. ¿Continuar?",
@@ -540,6 +546,8 @@ const STRINGS = {
     'error': 'Error: {msg}',
   },
   zh: {
+    "turbo": "加速",
+    "turbo.tip": "加速：VAX 以浏览器允许的最快速度运行（跳过等待）；开启期间 OpenVMS 时钟会快于真实时间",
     "cheatsheet": "OpenVMS 速查表（英文）",
     "auto.keyboard": "自动化期间键盘已锁定（点“停止”可恢复手动操作）",
     "auto.tcp.running": "VAX 正在运行：安装将从控制台继续（不会关机）。VAX 必须处于 >>> 提示符、Username: 提示符或 SYSTEM 的 $ 提示符；TCP/IP 套件光盘将替换 DUA1 中的光盘。继续吗？",

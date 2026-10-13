@@ -3,7 +3,8 @@
 // retard est abandonné au-delà de 200 ms (le VAX ralentit, sans rattrapage brutal).
 //
 // Messages reçus : start {rom, nvr, mem, server, disks, bridge}, input {bytes}, break, stop,
-// speed {factor} (vitesse du processeur : ×1 = 10 MIPS; pas encore offerte dans la page :
+// turbo {on} (temps simulé détaché du temps réel : le VAX va aussi vite que le fureteur le
+// permet; l'horloge de VMS prend de l'avance), speed {factor} (vitesse du processeur : ×1 = 10 MIPS; pas encore offerte dans la page :
 // le fureteur plafonne vers 16 MIPS et la boucle d'attente de VMS n'est pas reconnue),
 // swap {unit, drive, file} (change l'image d'un lecteur machine en marche; file nul : retire;
 // répond swapped {unit}).
@@ -32,6 +33,7 @@ let nvrTime = 0;
 let lastNvr = null;
 let handles = new Map();   // lecteur -> accès synchrone OPFS ouvert (fermés à l'arrêt)
 let bridgeUrl = null;
+let turbo = false;
 let socket = null;
 let socketTimer = 0;
 let flushTime = 0;
@@ -152,18 +154,21 @@ function flushNvr(force = false) {
   }
 }
 
+const nextTick = new MessageChannel();
+nextTick.port1.onmessage = () => tick();
+
 function tick() {
   if (!running) return;
   const t0 = performance.now();
   let sim = emu.now_ms();
-  let target = simBase + (t0 - realBase);
-  if (target - sim > MAX_LAG_MS) {
+  let target = turbo ? Infinity : simBase + (t0 - realBase);
+  if (!turbo && target - sim > MAX_LAG_MS) {
     // Retard abandonné : l'horloge simulée glisse.
     simBase = sim + MAX_LAG_MS - (t0 - realBase);
     target = sim + MAX_LAG_MS;
   }
   while (sim < target && performance.now() - t0 < SLICE_MS) {
-    if (!emu.run(Math.min(target - sim, 4), 2_000_000)) {
+    if (!emu.run(turbo ? 4 : Math.min(target - sim, 4), 2_000_000)) {
       running = false;
       post({ type: 'stopped', reason: emu.stop_reason() });
       break;
@@ -190,7 +195,10 @@ function tick() {
     flushTime = now;
     emu.flush_disks();
   }
-  if (running) setTimeout(tick, sim >= target ? 4 : 0);
+  if (!running) return;
+  // Turbo : tour suivant tout de suite (un setTimeout(0) répété attend 4 ms).
+  if (turbo) nextTick.port2.postMessage(0);
+  else setTimeout(tick, sim >= target ? 4 : 0);
 }
 
 self.onmessage = async (e) => {
@@ -210,6 +218,7 @@ self.onmessage = async (e) => {
         const [secs, centis] = yearSeconds();
         emu.set_time(secs, centis);
         emu.set_speed(msg.speed ?? 1);
+        turbo = !!msg.turbo;
         bridgeUrl = msg.bridge ?? null;
         if (bridgeUrl) emu.use_bridge();
         emu.power_up();
@@ -227,6 +236,11 @@ self.onmessage = async (e) => {
       }
       case 'input':
         emu?.type_bytes(msg.bytes);
+        break;
+      case 'turbo':
+        // En quittant le Turbo, le temps réel repart de l'heure simulée atteinte.
+        if (turbo && !msg.on && emu) simBase = emu.now_ms() - (performance.now() - realBase);
+        turbo = !!msg.on;
         break;
       case 'speed':
         emu?.set_speed(msg.factor);

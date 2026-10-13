@@ -1152,3 +1152,6 @@ button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--error)
 .pilot.locked { border-color: var(--error, #d9534f); }
 
 a.icon-button { display: inline-flex; align-items: center; justify-content: center; color: inherit; }
+
+/* Turbo actif */
+#turbo.active { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }

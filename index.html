@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=db44e9c6">
-  <link rel="stylesheet" href="style.css?v=db44e9c6">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=2f481bcc">
+  <link rel="stylesheet" href="style.css?v=2f481bcc">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -52,6 +52,7 @@
       <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></symbol>
       <symbol id="i-eject" viewBox="0 0 24 24"><path d="M12 5l7 8H5zM5 18h14"/></symbol>
       <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
       <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M8 7h7M8 11h5"/></symbol>
       <symbol id="i-archive" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/></symbol>
       <symbol id="i-wand" viewBox="0 0 24 24"><path d="M4 20l10-10M14 6V3M18 10h3M17 7l2-2M11 4l1 1M19 13l1 1"/></symbol>
@@ -283,6 +284,9 @@
           <span id="speed" class="speed" title="Emulated processor speed" data-i18n-title="speed.tip"></span>
           <button id="power" type="button" class="secondary with-icon" title="Turn the VAX on or off" data-i18n-title="power.tip" disabled>
             <svg class="icon"><use href="#i-power"/></svg><span id="power-label" data-i18n="power.on">Power on</span></button>
+          <button id="turbo" type="button" class="secondary with-icon" aria-pressed="false"
+                  title="Turbo" data-i18n-title="turbo.tip">
+            <svg class="icon"><use href="#i-zap"/></svg><span data-i18n="turbo">Turbo</span></button>
           <button id="halt" type="button" class="secondary with-icon" title="Halt the processor" data-i18n-title="halt.tip" disabled>
             <svg class="icon"><use href="#i-stop"/></svg><span data-i18n="halt">Halt</span></button>
           <button id="paste-button" type="button" class="icon-button" title="Paste text" data-i18n-title="clip.paste"
@@ -345,7 +349,7 @@
       </div>
     </main>
   </div>
-  <script src="vendor/xterm/xterm.js?v=db44e9c6"></script>
-  <script type="module" src="main.js?v=db44e9c6"></script>
+  <script src="vendor/xterm/xterm.js?v=2f481bcc"></script>
+  <script type="module" src="main.js?v=2f481bcc"></script>
 </body>
 </html>

@@ -33,6 +33,10 @@ WebAssembly. It installs and runs **OpenVMS VAX**, as on a VAX 4000 model 200.
 The **Halt** button (or Ctrl+P, when the console allows it) stops the processor and
 returns to the `>>>` prompt, like the BREAK key of a real console terminal.
 
+Normally the VAX runs in real time, like the real machine, about 10 MIPS. The **Turbo**
+button runs it as fast as your browser allows and skips the waits: OpenVMS boots in about
+5 seconds instead of 23. While Turbo is on, the OpenVMS clock runs ahead of the real time.
+
 ## Repository and one-click installs
 
 The **Repository** menu lists the files of the emulator's repository

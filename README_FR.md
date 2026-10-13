@@ -35,6 +35,11 @@ modèle 200.
 Le bouton **Arrêt** (ou Ctrl+P, quand la console le permet) arrête le processeur et
 revient à l'invite `>>>`, comme la touche BREAK d'un vrai terminal de console.
 
+Le VAX va normalement au rythme du temps réel, comme la vraie machine, environ 10 MIPS. Le
+bouton **Turbo** le fait aller aussi vite que le permet votre fureteur et saute les
+attentes : OpenVMS démarre en 5 secondes environ plutôt qu'en 23. Tant que le Turbo est
+actif, l'horloge d'OpenVMS prend de l'avance sur l'heure réelle.
+
 ## Dépôt et installations en un clic
 
 Le menu **Dépôt** liste les fichiers du dépôt de l'émulateur (<https://ve2cuy.com/vax>) :
