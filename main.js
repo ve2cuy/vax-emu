@@ -4,11 +4,11 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=53e78cc4';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=53e78cc4';
-import { initAccounts, accountsPowerChanged, accountsTcp } from './accounts.js?v=53e78cc4';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=31975b71';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=31975b71';
+import { initAccounts, accountsPowerChanged, accountsTcp } from './accounts.js?v=31975b71';
 
-const VERSION = '0.11.1';
+const VERSION = '0.11.2';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -453,6 +453,9 @@ async function powerOn() {
   await powerOff();
   term.reset();
   showStatus('status.starting');
+  await checkVolumes();
+  const fixed = fixDrives();
+  if (fixed.length) term.write(`\x1b[33m${t('disk.driveFixed', { list: fixed.join(', ') })}\x1b[0m\r\n`);
   const nvr = await dbGet('nvr');
   // Carte couleur : il lui faut son ROM (le pilote d'OpenVMS s'en sert).
   let qdssBytes = null;
@@ -653,6 +656,88 @@ document.getElementById('rom-file').addEventListener('change', async (e) => {
 // accès synchrone. Elles ne changent que machine éteinte (le fil les garde ouvertes).
 const DRIVE_TYPES = ['RA82', 'RA92', 'RA81', 'RA72', 'RA90', 'RD54', 'RD53', 'RX33', 'RX50', 'RRD40'];
 const DEFAULT_DRIVES = ['RA82', 'RRD40', 'RA92', 'RA92'];
+// Capacité de chaque type, en blocs (crates/machine/src/disk.rs).
+const DRIVE_BLOCKS = {
+  RX50: 800, RX33: 2400, RD53: 138672, RD54: 311200, RA81: 891072, RA82: 1216665,
+  RA72: 1953300, RA90: 2376153, RA92: 2940951, RRD40: 1331200,
+};
+
+/**
+ * Taille en blocs du volume ODS-2 d'une image (bloc de contrôle de BITMAP.SYS, comme
+ * crates/ods2), ou 0 si ce n'en est pas un. Un volume plus grand que son lecteur ne se
+ * lit pas au-delà de la fin du lecteur : l'amorçage s'arrête sur « ?06 HLT INST » et
+ * MOUNT répond ILLBLKNUM.
+ */
+async function volumeBlocks(blob) {
+  const block = async (lbn) => {
+    const b = await blob.slice(lbn * 512, lbn * 512 + 512).arrayBuffer();
+    return b.byteLength === 512 ? new DataView(b) : null;
+  };
+  const home = await block(1);
+  if (!home || new TextDecoder().decode(new Uint8Array(home.buffer, 496, 10)) !== 'DECFILE11B') return 0;
+  const cluster = home.getUint16(14, true);
+  // En-tête de BITMAP.SYS (fichier 2) : le deuxième après la table des en-têtes utilisés.
+  const h = await block(home.getUint32(24, true) + home.getUint16(32, true) + 1);
+  if (!h || h.getUint16(8, true) !== 2) return 0;
+  const mp = h.getUint8(1) * 2;
+  const w0 = h.getUint16(mp, true);
+  const lbn = [0, ((w0 & 0x3f00) << 8) | h.getUint16(mp + 2, true), h.getUint32(mp + 2, true), h.getUint32(mp + 4, true)][w0 >> 14];
+  const scb = lbn ? await block(lbn) : null;
+  if (!scb || scb.getUint16(2, true) !== cluster) return 0;
+  return scb.getUint32(4, true);
+}
+
+/** Type de lecteur pour un volume : celui de sa taille exacte, sinon `current` s'il
+ * suffit, sinon le plus petit qui le contient. */
+function driveForVolume(blocks, current) {
+  const types = DRIVE_TYPES.filter((n) => n !== 'RRD40');
+  const exact = types.find((n) => DRIVE_BLOCKS[n] === blocks);
+  if (exact) return exact;
+  if (DRIVE_BLOCKS[current] >= blocks) return current;
+  return types.filter((n) => DRIVE_BLOCKS[n] >= blocks).sort((a, b) => DRIVE_BLOCKS[a] - DRIVE_BLOCKS[b])[0] ?? current;
+}
+
+/** Lecteur trop petit pour son volume. */
+function driveTooSmall(unit) {
+  const d = prefs.disks[unit];
+  return !!(d?.file && d.volume && DRIVE_BLOCKS[driveOf(unit)] < d.volume);
+}
+
+/** Taille du volume des images déjà importées (une fois; VAX éteint, l'image est libre). */
+const volumeChecked = new Set();
+async function checkVolumes() {
+  if (running || !opfsOk) return;
+  let changed = false;
+  for (let unit = 0; unit < 4; unit++) {
+    const d = prefs.disks[unit];
+    if (!d?.file || d.volume !== undefined || d.drive === 'RRD40' || volumeChecked.has(d.file)) continue;
+    volumeChecked.add(d.file);
+    try {
+      d.volume = await volumeBlocks(await (await (await diskDir()).getFileHandle(d.file)).getFile());
+      changed = true;
+    } catch { /* image ouverte ailleurs ou absente : on réessaiera au prochain chargement */ }
+  }
+  if (changed) {
+    savePrefs();
+    renderDisks();
+  }
+}
+
+/** Mise sous tension : un lecteur trop petit pour son volume prend le bon type. */
+function fixDrives() {
+  const fixed = [];
+  for (let unit = 0; unit < 4; unit++) {
+    if (!driveTooSmall(unit)) continue;
+    const drive = driveForVolume(prefs.disks[unit].volume, driveOf(unit));
+    prefs.disks[unit].drive = drive;
+    fixed.push(`DUA${unit} : ${drive}`);
+  }
+  if (fixed.length) {
+    savePrefs();
+    renderDisks();
+  }
+  return fixed;
+}
 const diskUnits = document.getElementById('disk-units');
 const diskLock = document.getElementById('disk-lock');
 const diskFile = document.getElementById('disk-file');
@@ -719,12 +804,18 @@ function renderDisks() {
     sel.addEventListener('change', () => {
       prefs.disks[unit] = { ...(prefs.disks[unit] ?? {}), drive: sel.value };
       savePrefs();
+      renderDisks();
     });
     head.append(label, sel);
     const info = document.createElement('span');
     info.className = 'hint';
     info.textContent = diskLabel(d);
     if (d?.missing) info.classList.add('error');
+    if (driveTooSmall(unit)) {
+      info.textContent += ` ${t('disk.tooSmall', {
+        blocks: d.volume, drive: driveOf(unit), fit: driveForVolume(d.volume, driveOf(unit)) })}`;
+      info.classList.add('error');
+    }
     diskInfo[unit] = info;
     const actions = document.createElement('div');
     actions.className = 'row';
@@ -742,6 +833,7 @@ function renderDisks() {
     diskUnits.append(box);
   }
   showUsage();
+  checkVolumes();
 }
 languageListeners.push(renderDisks);
 
@@ -904,10 +996,23 @@ async function importStream(unit, name, size, stream, drive = null) {
       }
     }
     await out.close();
-    drive ??= /\.iso$/i.test(name) ? 'RRD40' : driveOf(unit);
-    prefs.disks[unit] = { drive, file, name, size: done };
+    const iso = /\.iso$/i.test(name) || drive === 'RRD40';
+    let volume;
+    if (!iso) {
+      try {
+        volume = await volumeBlocks(await (await (await diskDir()).getFileHandle(file)).getFile());
+      } catch { /* taille inconnue */ }
+    }
+    // Sans type imposé (dépôt), celui de la taille du volume, s'il est connu.
+    const before = driveOf(unit);
+    const chosen = drive ?? (iso ? 'RRD40' : volume ? driveForVolume(volume, before) : before);
+    prefs.disks[unit] = { drive: chosen, file, name, size: done, volume };
     savePrefs();
-    showStatus('disk.imported', { name, unit: `DUA${unit}` });
+    if (!drive && chosen !== before) {
+      showStatus('disk.importedDrive', { name, unit: `DUA${unit}`, drive: chosen });
+    } else {
+      showStatus('disk.imported', { name, unit: `DUA${unit}` });
+    }
     ok = true;
   } catch (e) {
     showStatus('error', { msg: e.message ?? String(e) });
