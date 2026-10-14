@@ -4,11 +4,11 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=6f5794d3';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=6f5794d3';
-import { initAccounts, accountsPowerChanged, accountsTcp } from './accounts.js?v=6f5794d3';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=53e78cc4';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=53e78cc4';
+import { initAccounts, accountsPowerChanged, accountsTcp } from './accounts.js?v=53e78cc4';
 
-const VERSION = '0.11.0';
+const VERSION = '0.11.1';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -49,6 +49,7 @@ const prefs = {
   repo: 'https://ve2cuy.com/vax', // dépôt de fichiers (dossiers rom, disk, iso)
   repoKind: 'disk',
   repoPick: {},      // fichier choisi dans chaque dossier du dépôt
+  privateKey: '',    // dossier secret du dépôt (private-<clé>), tiré du mot de passe
   turbo: false,      // Turbo : le VAX va aussi vite que le fureteur le permet
   netMode: 'virtual', // 'virtual' (réseau virtuel) ou 'bridge' (relais vax-bridge de ce PC)
   bridgeUrl: 'ws://127.0.0.1:8023',
@@ -1541,9 +1542,43 @@ function localized(entry, field) {
   return entry.i18n?.[getLanguage()]?.[field] ?? entry[field];
 }
 
-/** Entrées de `kind/index.json` (gardées en mémoire). */
+/** Entrées de `kind/index.json` (gardées en mémoire), suivies de celles du dossier
+ * privé quand un mot de passe l'a ouvert. */
 async function repoIndex(kind) {
-  const url = repoUrl(`${kind}/index.json`);
+  const entries = await readIndex(repoUrl(`${kind}/index.json`));
+  if (!prefs.privateKey) return entries;
+  return entries.concat(await privateIndex(prefs.privateKey, kind));
+}
+
+// Fichiers privés : le dossier `private-<clé>` du dépôt, où la clé (PBKDF2 du mot de
+// passe) est le seul moyen de le trouver; le serveur ne liste pas ses dossiers.
+// tools/depot/private.py y range les fichiers avec la même clé.
+const PRIVATE_SALT = 'vax-emu/private';
+const PRIVATE_ROUNDS = 200000;
+
+async function privateKeyFor(password) {
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode(PRIVATE_SALT), iterations: PRIVATE_ROUNDS }, base, 128);
+  return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Entrées privées de `kind` (liste vide si le dossier n'en a pas). */
+async function privateIndex(key, kind) {
+  const base = repoUrl(`private-${key}`);
+  let list;
+  try {
+    list = await readIndex(`${base}/${kind}/index.json`);
+  } catch (e) {
+    if (e.status === 404) return [];
+    throw e;
+  }
+  return list.map((e) => ({ ...e, base, private: true }));
+}
+
+/** Liste d'un index.json (gardée en mémoire). */
+async function readIndex(url) {
   let entries = repoCache.get(url);
   if (!entries) {
     let res;
@@ -1553,7 +1588,7 @@ async function repoIndex(kind) {
       // TypeError (« Failed to fetch ») : serveur injoignable, ou CORS refusé.
       throw Object.assign(new Error(t('repo.unavailable', { url, reason: t('repo.unreachable') })), { full: true });
     }
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { status: res.status });
     const list = await res.json();
     if (!Array.isArray(list)) throw new Error(t('repo.notList'));
     entries = list.map((e) => (typeof e === 'string' ? { file: e } : e)).filter((e) => e?.file);
@@ -1598,8 +1633,13 @@ async function maybeGunzip(body) {
   return stream.pipeThrough(new DecompressionStream('gzip'));
 }
 
+/** Adresse d'un fichier du dépôt (public, ou dossier privé : `entry.base`). */
+function entryUrl(kind, entry) {
+  return `${entry.base ?? repoUrl('').replace(/\/$/, '')}/${kind}/${entry.file.split('/').map(encodeURIComponent).join('/')}`;
+}
+
 async function fetchRepo(kind, entry) {
-  const url = repoUrl(`${kind}/${entry.file.split('/').map(encodeURIComponent).join('/')}`);
+  const url = entryUrl(kind, entry);
   let res;
   try {
     res = await fetch(url);
@@ -1715,7 +1755,7 @@ function repoDetailFor(kind, entry) {
     }, running || diskBusy));
   }
   const link = document.createElement('a');
-  link.href = repoUrl(`${kind}/${entry.file}`);
+  link.href = entryUrl(kind, entry);
   link.textContent = t('repo.download');
   link.className = 'hint';
   link.target = '_blank';
@@ -1744,7 +1784,7 @@ async function loadRepo() {
     const entries = await repoIndex(kind);
     if (prefs.repoKind !== kind) return;
     repoShown = entries;
-    repoSelect.replaceChildren(...entries.map((e, i) => new Option(localized(e, 'title') ?? e.file, String(i))));
+    repoSelect.replaceChildren(...entries.map((e, i) => new Option(`${e.private ? '🔒 ' : ''}${localized(e, 'title') ?? e.file}`, String(i))));
     if (!entries.length) repoSelect.append(new Option('—', ''));
     repoSelect.disabled = !entries.length;
     const picked = entries.findIndex((e) => e.file === prefs.repoPick[kind]);
@@ -1794,6 +1834,48 @@ repoInput.value = prefs.repo;
 document.getElementById('repo-save').addEventListener('click', () => useRepo(repoInput.value.trim()));
 repoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') useRepo(repoInput.value.trim()); });
 document.getElementById('repo-default').addEventListener('click', () => useRepo(DEFAULT_REPO));
+
+const privatePassword = document.getElementById('repo-password');
+const privateStatus = document.getElementById('repo-private-status');
+const privateLock = document.getElementById('repo-lock');
+
+function showPrivate(text) {
+  privateStatus.textContent = text ?? (prefs.privateKey ? t('repo.private.on') : '');
+  privateLock.hidden = !prefs.privateKey;
+}
+
+/** Ouvre le dossier privé du mot de passe : il doit avoir au moins un index.json. */
+async function unlockPrivate() {
+  const password = privatePassword.value;
+  if (!password) return;
+  showPrivate(t('repo.loading'));
+  try {
+    const key = await privateKeyFor(password);
+    let n = 0;
+    for (const kind of ['rom', 'disk', 'iso']) n += (await privateIndex(key, kind)).length;
+    if (!n) {
+      showPrivate(t('repo.private.none'));
+      return;
+    }
+    privatePassword.value = '';
+    prefs.privateKey = key;
+    savePrefs();
+    showPrivate(t('repo.private.opened', { n }));
+    loadRepo();
+  } catch (e) {
+    showPrivate(e.full ? e.message : t('repo.unavailable', { url: prefs.repo, reason: e.message }));
+  }
+}
+document.getElementById('repo-unlock').addEventListener('click', unlockPrivate);
+privatePassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockPrivate(); });
+privateLock.addEventListener('click', () => {
+  prefs.privateKey = '';
+  savePrefs();
+  showPrivate(t('repo.private.closed'));
+  loadRepo();
+});
+showPrivate();
+languageListeners.push(() => showPrivate());
 languageListeners.push(() => { if (repoShown.length) loadRepo(); });
 document.querySelector('[aria-controls="panel-repo"]').addEventListener('click', () => {
   if (!repoShown.length) loadRepo();

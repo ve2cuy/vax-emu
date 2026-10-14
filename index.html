@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=6f5794d3">
-  <link rel="stylesheet" href="style.css?v=6f5794d3">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=53e78cc4">
+  <link rel="stylesheet" href="style.css?v=53e78cc4">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -208,6 +208,13 @@
                 <button id="repo-default" type="button" class="secondary" data-i18n="repo.default">Default</button>
               </div>
               <p class="hint" data-i18n-html="repo.help"></p>
+              <label class="field"><span data-i18n="repo.private">Password for private files</span>
+                <input id="repo-password" type="password" autocomplete="off"></label>
+              <div class="row">
+                <button id="repo-unlock" type="button" class="secondary" data-i18n="repo.unlock">Unlock</button>
+                <button id="repo-lock" type="button" class="secondary" data-i18n="repo.lock" hidden>Lock</button>
+              </div>
+              <p id="repo-private-status" class="hint"></p>
             </details>
           </div>
         </div>
@@ -736,7 +743,7 @@
       </div>
     </form>
   </dialog>
-  <script src="vendor/xterm/xterm.js?v=6f5794d3"></script>
-  <script type="module" src="main.js?v=6f5794d3"></script>
+  <script src="vendor/xterm/xterm.js?v=53e78cc4"></script>
+  <script type="module" src="main.js?v=53e78cc4"></script>
 </body>
 </html>
