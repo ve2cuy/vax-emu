@@ -1272,3 +1272,43 @@ a.icon-button { display: inline-flex; align-items: center; justify-content: cent
 .terminal[hidden] { display: none; }
 /* Onglet Telnet : le message « VAX éteint » de la console ne couvre pas le terminal telnet. */
 .overlay.behind { display: none; }
+
+/* Comptes OpenVMS (accounts.js) : même cadre que le gestionnaire de fichiers. */
+.acc-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0 6px; border-bottom: 1px solid var(--border); }
+.acc-tab { padding: 6px 12px; border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; background: none; color: var(--muted); font: inherit; font-size: 0.9rem; cursor: pointer; }
+.acc-tab[aria-selected="true"] { border-color: var(--border); background: var(--surface-2); color: var(--text); font-weight: 600; }
+.acc-pane { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.acc-pane[hidden] { display: none; }
+.acc-pane .files-table td.mono { font: 0.82rem ui-monospace, Consolas, monospace; }
+.acc-editor-title { margin: 4px 0 8px; font-size: 1rem; }
+.acc-form { flex: 1; min-height: 0; overflow: auto; padding-right: 4px; }
+.acc-section { margin: 0 0 8px; border: 1px solid var(--border); border-radius: 8px; }
+.acc-section > summary { padding: 6px 10px; font-weight: 600; cursor: pointer; }
+.acc-section-body { padding: 4px 12px 12px; }
+.acc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13em, 1fr)); gap: 8px 14px; }
+.acc-grid.quotas { grid-template-columns: repeat(auto-fill, minmax(9em, 1fr)); }
+.acc-grid .field input, .acc-ask-fields .field input, .acc-ask-fields select { width: 100%; }
+.acc-grid .field small, .acc-ask-fields small { font-size: 0.76rem; }
+.acc-checks { display: flex; flex-wrap: wrap; gap: 2px 16px; }
+.acc-checks label.check { margin-top: 4px; font: 0.82rem ui-monospace, Consolas, monospace; }
+.acc-hours-wrap { overflow-x: auto; }
+.acc-hours { border-collapse: collapse; font-size: 0.74rem; }
+.acc-hours th, .acc-hours td { padding: 0 1px; text-align: center; }
+.acc-hours th.hour { min-width: 1.35em; color: var(--muted); font-weight: 400; }
+.acc-hours td.gap { padding-left: 10px; }
+.acc-hours input { margin: 0; }
+.acc-hours .link, .link { padding: 0 6px 0 0; border: 0; background: none; color: var(--accent-ink); font: 600 0.78rem ui-monospace, Consolas, monospace; cursor: pointer; }
+.acc-priv-wrap { max-height: 22rem; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+.acc-privs td, .acc-privs th { text-align: left; }
+.acc-rights { margin: 0 0 8px; padding-left: 1.2em; font-size: 0.86rem; }
+.acc-rights li { margin: 3px 0; }
+.acc-inline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.acc-inline select { width: auto; max-width: 20em; }
+.acc-ask-fields { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.acc-ask-fields fieldset { margin: 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; }
+.acc-cmdline { display: flex; align-items: center; gap: 6px; }
+.acc-cmdline code { font: 600 0.9rem ui-monospace, Consolas, monospace; }
+.acc-cmdline input { flex: 1; min-width: 8em; font: 0.9rem ui-monospace, Consolas, monospace; }
+.acc-examples { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 8px 0; }
+.acc-example { padding: 2px 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text); font: 0.76rem ui-monospace, Consolas, monospace; cursor: pointer; }
+.acc-output { flex: 1; min-height: 8rem; margin: 0; padding: 8px 10px; overflow: auto; border-radius: 8px; background: #000; color: #d8d8d8; font: 0.8rem/1.3 ui-monospace, Consolas, monospace; white-space: pre; }

@@ -191,6 +191,9 @@ DECwindows" section of the [README](../README.md) has the details.
   command sets the VAX address.
 - **Exchange files** with the VAX: the **folder** icon, in the top bar, opens the file
   manager.
+- **Create accounts** for other users: the **people** icon, in the top bar, opens the
+  OpenVMS accounts window (OpenVMS running, logged in as SYSTEM). Click **New account**,
+  then give a name, a UIC (for example group 300, member 1) and a password.
 - **Choose another model**: **Machine** section, **Model** list (VAXstation 3900/GPX in
   color, or MicroVAX 3900 and VAXserver 3900, without a graphics screen). The choice
   applies at the next power-on.

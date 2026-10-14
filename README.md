@@ -28,6 +28,8 @@ to a running OpenVMS system, no prior knowledge needed.
   puts the VAX on your own network.
 - **Telnet**: a second terminal in the page opens telnet sessions into the VAX.
 - **File manager**: browse and edit the files of an OpenVMS disk from the page.
+- **OpenVMS accounts**: every AUTHORIZE operation (accounts, identifiers, proxies) in a
+  window of the page.
 - **Coming next**: a faster interpreter and saved machine states.
 
 ## Getting started
@@ -312,6 +314,28 @@ The file manager works in two ways:
 For direct access, every write operation was checked with OpenVMS's
 `ANALYZE/DISK_STRUCTURE`; still, keep a copy of a disk you care about (the drive's
 download button) before changing it.
+
+## OpenVMS accounts (AUTHORIZE)
+
+The people icon, in the top bar, opens the **OpenVMS accounts** window: every operation
+of the AUTHORIZE utility without typing its commands. The page opens a hidden telnet
+session with the account you give (SYSTEM, or an account with SYSPRV) and has OpenVMS
+itself do each operation (`MCR AUTHORIZE …`). The VAX must be running with TCP/IP; the
+password is used to log in and is not kept.
+
+- **Accounts**: list (`SHOW /BRIEF`), full record (`SHOW`) edited in a form (`MODIFY`, or
+  `DEFAULT` for the DEFAULT record): owner, UIC, device and directory, CLI, login command
+  file, password and its lifetime, expiration, flags, primary days, access hours per mode
+  (network, batch, local, dialup, remote), quotas, authorized and default privileges,
+  identifiers held. New account (`ADD`, starting from DEFAULT, with its directory created),
+  copy (`COPY`), rename (`RENAME`), remove (`REMOVE`), listing (`LIST`).
+- **Identifiers**: add, attributes, rename, remove, grant to and revoke from an account
+  (`ADD`, `MODIFY`, `RENAME`, `REMOVE`, `GRANT`, `REVOKE /IDENTIFIER`), holders, listing.
+- **Proxies** (DECnet): create the database (`CREATE /PROXY`), add, default account,
+  remove, listing.
+- **AUTHORIZE command**: any other command, as typed at the `UAF>` prompt
+  (`CREATE /RIGHTS`, `MODIFY /SYSTEM_PASSWORD`, `ADD /IDENTIFIER /USER=*`, `HELP`…); its
+  output is shown and can be downloaded.
 
 ## Network
 

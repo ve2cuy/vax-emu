@@ -5,8 +5,8 @@
 // réécrirait par-dessus nos modifications). VAX en marche, on peut aussi passer par OpenVMS
 // lui-même : une session telnet cachée exécute les opérations (vms-files.js).
 
-import { t } from './i18n.js?v=ac008b42';
-import { VmsSession, vmsRun, childDir } from './vms-files.js?v=ac008b42';
+import { t } from './i18n.js?v=ec26bc4b';
+import { VmsSession, vmsRun, childDir } from './vms-files.js?v=ec26bc4b';
 
 let ctx = null;          // { disks(), running(), worker(), version }
 let fsWorker = null;
@@ -837,8 +837,11 @@ function dropSession() {
   ctx.worker()?.postMessage({ type: 'tcpClose', ch: VMS_CHANNEL });
 }
 
-/** Demande le compte, ouvre la connexion telnet cachée et s'y connecte. */
-async function connectVms(error = '') {
+/**
+ * Boîte du compte OpenVMS (aussi pour la fenêtre des comptes, accounts.js) : rend
+ * {user, password}, ou null si elle est annulée. `error` : raison de l'échec précédent.
+ */
+export async function askLogin(error = '') {
   const dlg = $('files-login');
   $('files-login-password').value = '';
   // Un échec ramène ici, avec sa raison : on ne reste pas en lecture seule sans le voir.
@@ -853,7 +856,14 @@ async function connectVms(error = '') {
   const user = $('files-login-user').value;
   const password = $('files-login-password').value;
   $('files-login-password').value = '';
-  if (!ok) return;
+  return ok ? { user, password } : null;
+}
+
+/** Demande le compte, ouvre la connexion telnet cachée et s'y connecte. */
+async function connectVms(error = '') {
+  const creds = await askLogin(error);
+  if (!creds) return;
+  const { user, password } = creds;
   const worker = ctx.worker();
   if (!worker) return;
   const s = new VmsSession((bytes) => ctx.worker()?.postMessage({ type: 'tcpSend', ch: VMS_CHANNEL, bytes: new Uint8Array(bytes) }));

@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=ac008b42">
-  <link rel="stylesheet" href="style.css?v=ac008b42">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=ec26bc4b">
+  <link rel="stylesheet" href="style.css?v=ec26bc4b">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -52,6 +52,7 @@
       <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></symbol>
       <symbol id="i-eject" viewBox="0 0 24 24"><path d="M12 5l7 8H5zM5 18h14"/></symbol>
       <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+      <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M15.5 4.6a3.5 3.5 0 0 1 0 6.8M18 14a6.5 6.5 0 0 1 3.5 6"/></symbol>
       <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v4h4"/></symbol>
       <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></symbol>
       <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
@@ -321,6 +322,10 @@
                   aria-label="Files on the disks" data-i18n-aria="fs.button">
             <svg class="icon"><use href="#i-folder"/></svg>
           </button>
+          <button id="accounts-button" type="button" class="icon-button" title="OpenVMS accounts (AUTHORIZE)" data-i18n-title="acc.button"
+                  aria-label="OpenVMS accounts (AUTHORIZE)" data-i18n-aria="acc.button">
+            <svg class="icon"><use href="#i-users"/></svg>
+          </button>
           <a id="cheatsheet" class="icon-button" href="cheatsheet.html" target="_blank" rel="noopener"
              title="OpenVMS cheat sheet" data-i18n-title="cheatsheet" aria-label="OpenVMS cheat sheet" data-i18n-aria="cheatsheet">
             <svg class="icon"><use href="#i-book"/></svg>
@@ -546,7 +551,146 @@
       </div>
     </form>
   </dialog>
-  <script src="vendor/xterm/xterm.js?v=ac008b42"></script>
-  <script type="module" src="main.js?v=ac008b42"></script>
+  <!-- Comptes OpenVMS : opérations d'AUTHORIZE par une session cachée (accounts.js) -->
+  <dialog id="accounts" class="dialog files accounts">
+    <div class="files-head">
+      <h2 data-i18n="acc.title">OpenVMS accounts</h2>
+      <span id="acc-mode" class="files-mode"></span>
+      <span class="spacer"></span>
+      <button id="acc-close" type="button" class="icon-button" title="Close" data-i18n-title="fs.close" aria-label="Close" data-i18n-aria="fs.close">
+        <svg class="icon"><use href="#i-x"/></svg></button>
+    </div>
+    <div id="acc-notice" class="files-notice" hidden>
+      <span id="acc-notice-text" class="warning"></span>
+      <button id="acc-connect" type="button" class="secondary small-button" data-i18n="acc.connect">Connect…</button>
+      <button id="acc-disconnect" type="button" class="secondary small-button" data-i18n="fs.vms.disconnect" hidden>Disconnect</button>
+    </div>
+    <div class="acc-tabs" role="tablist">
+      <button type="button" class="acc-tab" role="tab" data-tab="users" aria-selected="true" data-i18n="acc.tab.users">Accounts</button>
+      <button type="button" class="acc-tab" role="tab" data-tab="ids" aria-selected="false" data-i18n="acc.tab.ids">Identifiers</button>
+      <button type="button" class="acc-tab" role="tab" data-tab="proxies" aria-selected="false" data-i18n="acc.tab.proxies">Proxies</button>
+      <button type="button" class="acc-tab" role="tab" data-tab="cmd" aria-selected="false" data-i18n="acc.tab.cmd">AUTHORIZE command</button>
+    </div>
+    <div id="acc-users" class="acc-pane">
+      <div class="files-tools">
+        <button id="acc-refresh" type="button" class="secondary with-icon"><svg class="icon"><use href="#i-refresh"/></svg><span data-i18n="fs.refresh">Refresh</span></button>
+        <span class="toolbar-sep" aria-hidden="true"></span>
+        <button id="acc-new" type="button" class="secondary with-icon" title="ADD" ><svg class="icon"><use href="#i-plus"/></svg><span data-i18n="acc.new">New account</span></button>
+        <button id="acc-edit" type="button" class="secondary with-icon" title="SHOW, MODIFY"><svg class="icon"><use href="#i-edit"/></svg><span data-i18n="acc.edit">Open</span></button>
+        <button id="acc-copy" type="button" class="secondary with-icon" title="COPY"><svg class="icon"><use href="#i-copy"/></svg><span data-i18n="fs.copy">Copy</span></button>
+        <button id="acc-rename" type="button" class="secondary with-icon" title="RENAME"><svg class="icon"><use href="#i-rename"/></svg><span data-i18n="fs.rename">Rename</span></button>
+        <button id="acc-remove" type="button" class="secondary with-icon" title="REMOVE"><svg class="icon"><use href="#i-trash"/></svg><span data-i18n="fs.delete">Delete</span></button>
+        <button id="acc-list" type="button" class="secondary with-icon" title="LIST"><svg class="icon"><use href="#i-file"/></svg><span data-i18n="acc.list">Listing</span></button>
+      </div>
+      <div class="files-filter">
+        <input id="acc-filter" type="search" placeholder="Filter" data-i18n-placeholder="acc.filter" aria-label="Filter" data-i18n-aria="acc.filter" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <span id="acc-user-count" class="hint"></span>
+      </div>
+      <div class="files-scroll files-list">
+        <table class="files-table">
+          <thead><tr>
+            <th data-i18n="acc.col.user">Username</th><th data-i18n="acc.col.owner">Owner</th><th>UIC</th>
+            <th data-i18n="acc.col.account">Account</th><th data-i18n="acc.col.privs">Privileges</th><th class="num" data-i18n="acc.col.prio">Prio.</th>
+            <th data-i18n="acc.col.dir">Directory</th>
+          </tr></thead>
+          <tbody id="acc-user-rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="acc-editor" class="acc-pane" hidden>
+      <h3 id="acc-editor-title" class="acc-editor-title"></h3>
+      <div id="acc-form" class="acc-form"></div>
+      <div class="dialog-actions">
+        <button id="acc-save" type="button" data-i18n="fs.props.save">Save</button>
+        <span class="spacer"></span>
+        <button id="acc-back" type="button" class="secondary" data-i18n="fs.back">Back to the list</button>
+      </div>
+    </div>
+    <div id="acc-ids" class="acc-pane" hidden>
+      <div class="files-tools">
+        <button id="acc-id-refresh" type="button" class="secondary with-icon"><svg class="icon"><use href="#i-refresh"/></svg><span data-i18n="fs.refresh">Refresh</span></button>
+        <span class="toolbar-sep" aria-hidden="true"></span>
+        <button id="acc-id-add" type="button" class="secondary with-icon" title="ADD /IDENTIFIER"><svg class="icon"><use href="#i-plus"/></svg><span data-i18n="acc.id.addBtn">New identifier</span></button>
+        <button id="acc-id-modify" type="button" class="secondary with-icon" title="MODIFY /IDENTIFIER"><svg class="icon"><use href="#i-edit"/></svg><span data-i18n="acc.id.modifyBtn">Modify</span></button>
+        <button id="acc-id-rename" type="button" class="secondary with-icon" title="RENAME /IDENTIFIER"><svg class="icon"><use href="#i-rename"/></svg><span data-i18n="fs.rename">Rename</span></button>
+        <button id="acc-id-remove" type="button" class="secondary with-icon" title="REMOVE /IDENTIFIER"><svg class="icon"><use href="#i-trash"/></svg><span data-i18n="fs.delete">Delete</span></button>
+        <span class="toolbar-sep" aria-hidden="true"></span>
+        <button id="acc-id-grant" type="button" class="secondary with-icon" title="GRANT /IDENTIFIER"><svg class="icon"><use href="#i-plus"/></svg><span data-i18n="acc.grant">Grant</span></button>
+        <button id="acc-id-revoke" type="button" class="secondary with-icon" title="REVOKE /IDENTIFIER"><svg class="icon"><use href="#i-x"/></svg><span data-i18n="acc.revoke">Revoke</span></button>
+        <button id="acc-id-list" type="button" class="secondary with-icon" title="LIST /IDENTIFIER"><svg class="icon"><use href="#i-file"/></svg><span data-i18n="acc.list">Listing</span></button>
+      </div>
+      <div class="files-filter">
+        <label class="check"><input id="acc-uic-ids" type="checkbox"> <span data-i18n="acc.id.showUic">Show account (UIC) identifiers</span></label>
+        <span id="acc-id-count" class="hint"></span>
+      </div>
+      <div class="files-scroll files-list">
+        <table class="files-table">
+          <thead><tr><th data-i18n="acc.id.name">Name</th><th data-i18n="acc.id.value">Value</th><th data-i18n="acc.id.attrs">Attributes</th><th data-i18n="acc.id.holders">Holders</th></tr></thead>
+          <tbody id="acc-id-rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="acc-proxies" class="acc-pane" hidden>
+      <div class="files-tools">
+        <button id="acc-proxy-refresh" type="button" class="secondary with-icon"><svg class="icon"><use href="#i-refresh"/></svg><span data-i18n="fs.refresh">Refresh</span></button>
+        <span class="toolbar-sep" aria-hidden="true"></span>
+        <button id="acc-proxy-add" type="button" class="secondary with-icon" title="ADD /PROXY"><svg class="icon"><use href="#i-plus"/></svg><span data-i18n="acc.proxy.addBtn">New proxy</span></button>
+        <button id="acc-proxy-default" type="button" class="secondary with-icon" title="MODIFY /PROXY /DEFAULT"><svg class="icon"><use href="#i-edit"/></svg><span data-i18n="acc.proxy.defaultBtn">Default account</span></button>
+        <button id="acc-proxy-remove" type="button" class="secondary with-icon" title="REMOVE /PROXY"><svg class="icon"><use href="#i-trash"/></svg><span data-i18n="fs.delete">Delete</span></button>
+        <button id="acc-proxy-list" type="button" class="secondary with-icon" title="LIST /PROXY"><svg class="icon"><use href="#i-file"/></svg><span data-i18n="acc.list">Listing</span></button>
+      </div>
+      <div id="acc-proxy-inactive" class="files-notice" hidden>
+        <span class="warning" data-i18n="acc.proxy.inactive">The proxy database does not exist yet.</span>
+        <button id="acc-proxy-create" type="button" class="secondary small-button" title="CREATE /PROXY" data-i18n="acc.proxy.create">Create it</button>
+      </div>
+      <p class="hint" data-i18n="acc.proxy.hint"></p>
+      <div class="files-scroll files-list">
+        <table class="files-table">
+          <thead><tr><th data-i18n="acc.proxy.remote">Remote user (node::user)</th><th data-i18n="acc.proxy.locals">Local accounts</th></tr></thead>
+          <tbody id="acc-proxy-rows"></tbody>
+        </table>
+      </div>
+      <span id="acc-proxy-count" class="hint"></span>
+    </div>
+    <div id="acc-cmdpane" class="acc-pane" hidden>
+      <p class="hint" data-i18n="acc.cmd.hint"></p>
+      <div class="acc-cmdline">
+        <code>UAF&gt;</code>
+        <input id="acc-cmd" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="AUTHORIZE command" data-i18n-aria="acc.tab.cmd">
+        <button id="acc-run" type="button" data-i18n="acc.run">Run</button>
+        <button id="acc-help" type="button" class="secondary" title="HELP" data-i18n="acc.help">Help</button>
+      </div>
+      <div class="acc-examples">
+        <span class="hint" data-i18n="acc.examples">Examples:</span>
+        <button type="button" class="acc-example">SHOW * /BRIEF</button>
+        <button type="button" class="acc-example">SHOW /IDENTIFIER /FULL *</button>
+        <button type="button" class="acc-example">LIST /FULL</button>
+        <button type="button" class="acc-example">ADD /IDENTIFIER /USER=*</button>
+        <button type="button" class="acc-example">CREATE /RIGHTS</button>
+        <button type="button" class="acc-example">MODIFY /SYSTEM_PASSWORD=</button>
+        <button type="button" class="acc-example">HELP MODIFY /FLAGS</button>
+      </div>
+      <pre id="acc-output" class="acc-output"></pre>
+      <div class="dialog-actions">
+        <span class="spacer"></span>
+        <button id="acc-output-save" type="button" class="secondary" data-i18n="acc.save.output" disabled>Download the output</button>
+      </div>
+    </div>
+    <p id="acc-status" class="hint files-status" role="status"></p>
+  </dialog>
+
+  <dialog id="acc-ask" class="dialog files-small">
+    <form method="dialog">
+      <h2 id="acc-ask-title"></h2>
+      <div id="acc-ask-fields" class="acc-ask-fields"></div>
+      <div class="dialog-actions">
+        <span class="spacer"></span>
+        <button type="button" class="secondary acc-cancel" data-i18n="fs.cancel">Cancel</button>
+        <button type="submit" value="ok" data-i18n="fs.ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="vendor/xterm/xterm.js?v=ec26bc4b"></script>
+  <script type="module" src="main.js?v=ec26bc4b"></script>
 </body>
 </html>

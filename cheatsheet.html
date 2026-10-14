@@ -169,6 +169,16 @@ UAF&gt; SHOW ALAIN            ! aussi : MODIFY, REMOVE, LIST
 UAF&gt; EXIT
 $ CREATE/DIRECTORY SYS$SYSDEVICE:[ALAIN] /OWNER_UIC=[200,200]</pre>
   <p class="muted">Sans clé de licence (PAK), VMS permet la connexion sur la console (OPA0). Les connexions par telnet passent aussi (CMU-OpenVMS/IP).</p>
+  <p>Voir les autorisations d'un compte (privilèges, quotas, identificateurs) :</p>
+<pre>$ SET DEFAULT SYS$SYSTEM          ! sinon AUTHORIZE offre de créer SYSUAF.DAT : NO
+$ MCR AUTHORIZE SHOW SYSTEM       ! en une ligne (RUN ne passe pas de paramètres)
+UAF&gt; SHOW SYSTEM /BRIEF           ! une ligne : UIC, compte, privilèges, répertoire
+UAF&gt; SHOW * /BRIEF                ! tous les comptes
+UAF&gt; SHOW /IDENTIFIER /USER=SYSTEM ! identificateurs (droits)
+UAF&gt; SHOW SYSTEM /FULL            ! la fiche et les identificateurs
+$ SHOW PROCESS /PRIVILEGES        ! la session en cours seulement
+$ SHOW PROCESS /RIGHTS</pre>
+  <p class="muted">La fiche donne les privilèges autorisés (<em>Authorized Privileges</em>) et ceux par défaut (<em>Default Privileges</em>). Lire SYSUAF.DAT demande SYSPRV (le compte SYSTEM l'a). Dans l'émulateur, l'icône des personnes de la barre du haut fait toutes ces opérations dans une fenêtre.</p>
 
   <h2>Arrêter et redémarrer</h2>
 <pre>$ @SYS$SYSTEM:SHUTDOWN       ! répondre 0 minute, puis Retour aux questions
@@ -410,6 +420,16 @@ UAF&gt; SHOW ALAIN            ! also: MODIFY, REMOVE, LIST
 UAF&gt; EXIT
 $ CREATE/DIRECTORY SYS$SYSDEVICE:[ALAIN] /OWNER_UIC=[200,200]</pre>
   <p class="muted">Without license keys (PAKs), VMS allows logins on the console (OPA0). Telnet logins also work (CMU-OpenVMS/IP).</p>
+  <p>Viewing an account's authorizations (privileges, quotas, identifiers):</p>
+<pre>$ SET DEFAULT SYS$SYSTEM          ! otherwise AUTHORIZE offers to create SYSUAF.DAT: NO
+$ MCR AUTHORIZE SHOW SYSTEM       ! on one line (RUN does not pass parameters)
+UAF&gt; SHOW SYSTEM /BRIEF           ! one line: UIC, account, privileges, directory
+UAF&gt; SHOW * /BRIEF                ! all accounts
+UAF&gt; SHOW /IDENTIFIER /USER=SYSTEM ! identifiers (rights)
+UAF&gt; SHOW SYSTEM /FULL            ! the record and its identifiers
+$ SHOW PROCESS /PRIVILEGES        ! current session only
+$ SHOW PROCESS /RIGHTS</pre>
+  <p class="muted">The record lists the authorized privileges (<em>Authorized Privileges</em>) and the default ones (<em>Default Privileges</em>). Reading SYSUAF.DAT requires SYSPRV (the SYSTEM account has it). In the emulator, the people icon of the top bar does all of this in a window.</p>
 
   <h2>Shutting down and rebooting</h2>
 <pre>$ @SYS$SYSTEM:SHUTDOWN       ! answer 0 minutes, then Return to the questions

@@ -29,6 +29,8 @@ vide à un système OpenVMS en marche, sans connaissance préalable.
 - **Telnet** : un deuxième terminal dans la page ouvre des sessions telnet vers le VAX.
 - **Gestionnaire de fichiers** : parcourir et modifier les fichiers d'un disque OpenVMS
   depuis la page.
+- **Comptes OpenVMS** : toutes les opérations d'AUTHORIZE (comptes, identificateurs,
+  proxys) dans une fenêtre de la page.
 - **À venir** : un interpréteur plus rapide et la sauvegarde de l'état de la machine.
 
 ## Pour commencer
@@ -328,6 +330,30 @@ Le gestionnaire a deux façons de travailler :
 Pour l'accès direct, chaque opération d'écriture a été
 vérifiée par `ANALYZE/DISK_STRUCTURE` d'OpenVMS; gardez tout de même une copie d'un disque
 auquel vous tenez (bouton de téléchargement du lecteur) avant de le modifier.
+
+## Comptes OpenVMS (AUTHORIZE)
+
+L'icône des personnes, dans la barre du haut, ouvre la fenêtre des **comptes OpenVMS** :
+toutes les opérations de l'utilitaire AUTHORIZE sans taper ses commandes. La page ouvre une
+session telnet cachée avec le compte que vous donnez (SYSTEM, ou un compte qui a SYSPRV)
+et fait faire chaque opération par OpenVMS lui-même (`MCR AUTHORIZE …`). Il faut le VAX en
+marche avec TCP/IP; le mot de passe sert à la connexion et n'est pas gardé.
+
+- **Comptes** : liste (`SHOW /BRIEF`), fiche complète (`SHOW`) à modifier dans un formulaire
+  (`MODIFY`, ou `DEFAULT` pour la fiche DEFAULT) : propriétaire, UIC, disque et répertoire,
+  CLI, procédure de connexion, mot de passe et sa durée, expiration, drapeaux, jours
+  principaux, heures d'accès par mode (réseau, lots, local, ligne commutée, distant),
+  quotas, privilèges autorisés et par défaut, identificateurs détenus. Nouveau compte
+  (`ADD`, à partir de DEFAULT, avec la création de son répertoire), copie (`COPY`),
+  renommage (`RENAME`), suppression (`REMOVE`), listage (`LIST`).
+- **Identificateurs** : ajout, attributs, renommage, suppression, accorder et révoquer à un
+  compte (`ADD`, `MODIFY`, `RENAME`, `REMOVE`, `GRANT`, `REVOKE /IDENTIFIER`), détenteurs,
+  listage.
+- **Proxys** (DECnet) : création de la base (`CREATE /PROXY`), ajout, compte par défaut,
+  suppression, listage.
+- **Commande AUTHORIZE** : toute autre commande, telle que tapée à l'invite `UAF>`
+  (`CREATE /RIGHTS`, `MODIFY /SYSTEM_PASSWORD`, `ADD /IDENTIFIER /USER=*`, `HELP`…); sa
+  sortie s'affiche et se télécharge.
 
 ## Réseau
 

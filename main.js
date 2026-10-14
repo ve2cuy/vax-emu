@@ -4,10 +4,11 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=ac008b42';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=ac008b42';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=ec26bc4b';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=ec26bc4b';
+import { initAccounts, accountsPowerChanged, accountsTcp } from './accounts.js?v=ec26bc4b';
 
-const VERSION = '0.9.0';
+const VERSION = '0.10.0';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -481,6 +482,7 @@ async function powerOn() {
   clearScreen();
   running = true;
   filesPowerChanged();
+  accountsPowerChanged();
   prefs.power = true;
   savePrefs();
   updateButtons();
@@ -495,7 +497,10 @@ function powerOff(user = false) {
   running = false;
   // Écran graphique éteint avec la machine (sinon la dernière image y resterait).
   clearScreen();
-  if (w) filesPowerChanged();
+  if (w) {
+    filesPowerChanged();
+    accountsPowerChanged();
+  }
   speed.textContent = '';
   telnetStateChanged('off', null);
   if (user) {
@@ -576,12 +581,14 @@ function onWorkerMessage(e) {
       filesReply(msg);
       break;
     case 'tcp':
-      // Canal 1 : la session cachée du gestionnaire de fichiers.
-      if (msg.ch) filesTcp(msg);
+      // Canal 1 : la session cachée du gestionnaire de fichiers; canal 2 : celle des comptes.
+      if (msg.ch === 2) accountsTcp(msg);
+      else if (msg.ch) filesTcp(msg);
       else telnetInput(msg.bytes);
       break;
     case 'tcpState':
-      if (msg.ch) filesTcp(msg);
+      if (msg.ch === 2) accountsTcp(msg);
+      else if (msg.ch) filesTcp(msg);
       else telnetStateChanged(msg.state, msg.ip);
       break;
     case 'swapped':
@@ -2229,3 +2236,4 @@ else if (rom) showStatus('status.off');
 
 // Tant que le fil de la machine existe, c'est lui qui tient les images (lecture seule).
 initFiles({ disks: () => prefs.disks, running: () => !!worker, worker: () => worker, version: V });
+initAccounts({ running: () => !!worker, worker: () => worker });

@@ -194,6 +194,10 @@ C'est une étape pour plus tard, quand l'essentiel vous sera familier. La sectio
   commande `NETCONFIG` règle l'adresse du VAX.
 - **Échanger des fichiers** avec le VAX : l'icône du **dossier**, dans la barre du haut,
   ouvre le gestionnaire de fichiers.
+- **Créer des comptes** pour d'autres usagers : l'icône des **personnes**, dans la barre du
+  haut, ouvre la fenêtre des comptes OpenVMS (OpenVMS en marche, connexion comme SYSTEM).
+  Bouton **Nouveau compte**, puis un nom, une UIC (par exemple groupe 300, membre 1) et un
+  mot de passe.
 - **Choisir un autre modèle** : section **Machine**, liste **Modèle** (VAXstation 3900/GPX
   en couleur, ou MicroVAX 3900 et VAXserver 3900, sans écran graphique). Le choix
   s'applique à la prochaine mise sous tension.
