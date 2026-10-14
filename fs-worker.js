@@ -4,8 +4,8 @@
 //
 // Message reçu : {id, file, op, args}. Réponse : {id, ok, result} ou {id, ok: false, error}.
 
-import init, { Ods2 } from './pkg/vax_web.js?v=0a336e04';
-import { fsRun, fsError } from './fs-ops.js?v=0a336e04';
+import init, { Ods2 } from './pkg/vax_web.js?v=d7d2ffc1';
+import { fsRun, fsError } from './fs-ops.js?v=d7d2ffc1';
 
 const version = new URL(import.meta.url).search; // ?v=… transmis par la page
 let ready = null;
