@@ -26,8 +26,8 @@
 // Disques : fichiers de l'OPFS (dossier « disks »), ouverts en accès synchrone et branchés
 // sur les lecteurs MSCP (disks : [{unit, drive, file}]).
 
-import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=ec26bc4b';
-import { fsRun, fsError } from './fs-ops.js?v=ec26bc4b';
+import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=b68dc71e';
+import { fsRun, fsError } from './fs-ops.js?v=b68dc71e';
 
 const version = new URL(import.meta.url).search; // ?v=… transmis par la page
 let ready = null;

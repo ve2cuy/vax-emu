@@ -8,14 +8,14 @@
 // REVOKE, SHOW, LIST /IDENTIFIER), proxys (ADD, MODIFY, REMOVE, SHOW, LIST, CREATE /PROXY) et
 // une ligne de commande libre pour le reste (CREATE /RIGHTS, MODIFY /SYSTEM_PASSWORD, HELP…).
 
-import { t } from './i18n.js?v=ec26bc4b';
-import { VmsSession } from './vms-files.js?v=ec26bc4b';
-import { askLogin } from './files.js?v=ec26bc4b';
+import { t } from './i18n.js?v=b68dc71e';
+import { VmsSession } from './vms-files.js?v=b68dc71e';
+import { askLogin } from './files.js?v=b68dc71e';
 import {
   PRIVS, FLAGS, DAYS, MODES, QUOTAS, ID_ATTRS, fail, userName, idName, proxyName, password, uic, octal,
   idValue, isoDate, vmsDate, messages, parseBrief, parseUser, parseIdentifiers, parseRights, parseProxies,
   modifyQualifiers, packCommands, freeCommand, quoted,
-} from './uaf.js?v=ec26bc4b';
+} from './uaf.js?v=b68dc71e';
 
 const ACC_CHANNEL = 2;   // canal TCP du fil de la machine réservé à cette session
 const PROTECTED = ['SYSTEM', 'DEFAULT'];
@@ -238,10 +238,28 @@ function buildForm(r, isNew, rights) {
     el('div', { class: 'acc-grid quotas' }, QUOTAS.map(([, q]) => field(`q.${q}`, q, (F.quotas[q] = text(r.quotas[q] ?? '', { inputmode: 'numeric', size: 8 }))))));
   const privRows = PRIVS.map((p) => el('tr', {}, el('td', { class: 'mono', text: p }),
     el('td', {}, (F.privs[p] = check(r.privs.includes(p)))), el('td', {}, (F.defprivs[p] = check(r.defprivs.includes(p))))));
+  // Case d'en-tête : coche ou décoche toute la colonne (mi-cochée si la colonne l'est en partie).
+  const allBox = (boxes, label) => {
+    const list = Object.values(boxes);
+    const box = el('input', { type: 'checkbox', title: t('acc.priv.all'), 'aria-label': `${label} : ${t('acc.priv.all')}` });
+    const sync = () => {
+      const n = list.filter((c) => c.checked).length;
+      box.checked = n === list.length;
+      box.indeterminate = n > 0 && n < list.length;
+    };
+    box.addEventListener('change', () => {
+      for (const c of list) c.checked = box.checked;
+      sync();
+    });
+    for (const c of list) c.addEventListener('change', sync);
+    sync();
+    return el('label', { class: 'acc-all' }, box, ` ${label}`);
+  };
   const privs = section(t('acc.sec.privs'),
     el('p', { class: 'hint', text: t('acc.privs.hint') }),
     el('div', { class: 'acc-priv-wrap' }, el('table', { class: 'files-table acc-privs' },
-      el('thead', {}, el('tr', {}, el('th', { text: t('acc.priv') }), el('th', { text: t('acc.priv.auth') }), el('th', { text: t('acc.priv.def') }))),
+      el('thead', {}, el('tr', {}, el('th', { text: t('acc.priv') }),
+        el('th', {}, allBox(F.privs, t('acc.priv.auth'))), el('th', {}, allBox(F.defprivs, t('acc.priv.def'))))),
       el('tbody', {}, privRows))));
   let held = null;
   if (!isNew) {
@@ -897,4 +915,4 @@ export function initAccounts(context) {
 }
 
 // Pour les essais (tools/chrome/accounts_check.py) : les analyseurs et constructeurs.
-export const testing = { parseBrief, parseUser, parseIdentifiers, parseRights, parseProxies, modifyQualifiers, packCommands, quoted, octal };
+export const testing = { buildForm, parseBrief, parseUser, parseIdentifiers, parseRights, parseProxies, modifyQualifiers, packCommands, quoted, octal };
