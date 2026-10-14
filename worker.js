@@ -26,8 +26,8 @@
 // Disques : fichiers de l'OPFS (dossier « disks »), ouverts en accès synchrone et branchés
 // sur les lecteurs MSCP (disks : [{unit, drive, file}]).
 
-import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=e199fbe4';
-import { fsRun, fsError } from './fs-ops.js?v=e199fbe4';
+import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=f311b26e';
+import { fsRun, fsError } from './fs-ops.js?v=f311b26e';
 
 const version = new URL(import.meta.url).search; // ?v=… transmis par la page
 let ready = null;
@@ -46,6 +46,22 @@ let turbo = false;
 let video = false;       // carte graphique QVSS installée
 let videoTime = 0;
 let mouseAt = null;     // dernière position de la souris donnée au VAX
+// Clavier et souris de l'écran graphique : touches tenues, boutons tenus, et heure (réelle)
+// jusqu'à laquelle le Turbo reste suspendu après une touche ou un clic. Le VAX mesure la
+// durée d'un appui en temps simulé : en rafale, une touche à peine frappée lui paraîtrait
+// tenue longtemps (Tab sauterait plusieurs champs) et deux clics ne feraient plus un double clic.
+const heldKeys = new Set();
+let heldButtons = 0;
+let inputUntil = 0;
+const INPUT_HOLD_MS = 700;
+
+function screenInput() {
+  inputUntil = performance.now() + INPUT_HOLD_MS;
+  if (burst && emu) {
+    simBase = emu.now_ms() - (performance.now() - realBase);
+    burst = false;
+  }
+}
 const VIDEO_MS = 33;     // au plus 30 images par seconde vers la page
 const tcps = new Map();  // canal -> {id, state} : connexions TCP de la page vers le VAX
 let burst = false;       // Turbo : en rafale (temps simulé détaché du temps réel)
@@ -214,7 +230,7 @@ function tick() {
   let sim = emu.now_ms();
   const sim0 = sim;
   const wasBurst = burst;
-  burst = turbo && t0 - lastActivity < TURBO_WINDOW_MS;
+  burst = turbo && t0 - lastActivity < TURBO_WINDOW_MS && !heldKeys.size && !heldButtons && t0 >= inputUntil;
   // Fin d'une rafale : le temps réel repart de l'heure simulée atteinte.
   if (wasBurst && !burst) simBase = sim - (t0 - realBase);
   let target = burst ? Infinity : simBase + (t0 - realBase);
@@ -361,14 +377,20 @@ self.onmessage = async (e) => {
         emu?.set_speed(msg.factor);
         break;
       case 'vkey':
+        if (msg.state === 1) heldKeys.delete(msg.code);
+        else heldKeys.add(msg.code);
+        screenInput();
         emu?.video_key(msg.code, msg.state);
         break;
       case 'vmouse':
+        if (msg.buttons !== heldButtons) screenInput();
+        heldButtons = msg.buttons;
         emu?.video_mouse(msg.x, msg.y, msg.buttons);
         mouseAt = [msg.x, msg.y];
         break;
       case 'vbuttons':
         // Boutons seuls (relâchés quand la page perd la souris) : le pointeur ne bouge pas.
+        heldButtons = msg.buttons;
         if (mouseAt) emu?.video_mouse(mouseAt[0], mouseAt[1], msg.buttons);
         break;
       case 'tcpOpen':
