@@ -4,10 +4,10 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=a8e07f57';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=a8e07f57';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=e199fbe4';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=e199fbe4';
 
-const VERSION = '0.7.4';
+const VERSION = '0.7.5';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -493,6 +493,8 @@ function powerOff(user = false) {
   const w = worker;
   worker = null;
   running = false;
+  // Écran graphique éteint avec la machine (sinon la dernière image y resterait).
+  clearScreen();
   if (w) filesPowerChanged();
   speed.textContent = '';
   telnetStateChanged('off', null);
