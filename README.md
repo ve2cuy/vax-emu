@@ -147,7 +147,8 @@ the relay running: it prints `page branchée` when the page connects.
 In OpenVMS, with TCP/IP installed (the Install TCP/IP button), log in as SYSTEM and type
 `NETCONFIG`: it asks for the address (one that is free on your network, e.g.
 192.168.2.77), the mask, the gateway and the name servers, restarts TCP/IP and pings the
-gateway.
+gateway. It works with CMU-OpenVMS/IP and with DEC TCP/IP Services (UCX), whichever is
+installed.
 
 ### 4. Reach the VAX
 

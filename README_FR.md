@@ -157,7 +157,8 @@ ordinateur sur cette carte, ou un morceau de la description de la carte;
 Dans OpenVMS, TCP/IP installé (bouton Installer TCP/IP), ouvrez une session SYSTEM et
 tapez `NETCONFIG` : la commande demande l'adresse (libre sur votre réseau, ex.
 192.168.2.77), le masque, la passerelle et les serveurs DNS, relance TCP/IP et « pingue »
-la passerelle.
+la passerelle. Elle marche avec CMU-OpenVMS/IP et avec DEC TCP/IP Services (UCX), celle
+des deux qui est installée.
 
 ### 4. Joindre le VAX
 
