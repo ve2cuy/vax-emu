@@ -143,6 +143,53 @@ ordinateur sur cette carte, ou un morceau de la description de la carte;
 `vax-bridge --iface "?"` énumère les cartes. Laissez le relais en marche : il affiche
 `page branchée` quand la page s'y connecte.
 
+### Lancer le relais depuis la page (facultatif)
+
+Plutôt que de lancer le relais dans un terminal à chaque fois, enregistrez-le une fois :
+la section **Réseau** de la page, en **Pont local**, offre alors un bouton **Lancer le
+relais**. Au premier clic, le fureteur demande s'il peut ouvrir vax-bridge : acceptez (et
+cochez « toujours permettre »). Le relais part avec les options données à
+l'enregistrement; la page s'y branche d'elle-même en quelques secondes. S'il tourne déjà,
+le bouton ne lance pas de second relais.
+
+Placez d'abord le relais à son emplacement définitif : l'enregistrement retient son
+chemin. Puis, dans un terminal :
+
+**Windows**
+
+```
+vax-bridge --install --iface 192.168.2.11
+```
+
+Le relais s'ouvre dans une fenêtre de console; fermez-la pour l'arrêter.
+
+**Linux**
+
+```
+sudo setcap cap_net_raw,cap_net_admin=eip vax-bridge
+./vax-bridge --install --iface eth0
+```
+
+La première commande permet au relais de capturer sans `sudo` (le bouton ne peut pas
+donner de mot de passe). L'enregistrement crée
+`~/.local/share/applications/vax-bridge.desktop` (il faut `xdg-utils`); le relais s'ouvre
+dans un terminal.
+
+**macOS**
+
+```
+./vax-bridge --install --iface en0
+```
+
+L'enregistrement crée la petite application `~/Applications/VAX Bridge.app`. À chaque
+lancement, macOS demande le mot de passe d'administrateur (le relais lit les cartes par
+`/dev/bpf*`). Le relais tourne en arrière-plan; son journal est `/tmp/vax-bridge.log`.
+Pour l'arrêter : `sudo pkill vax-bridge`. Pas encore essayé sur un vrai Mac.
+
+Les options `--port`, `--telnet`, `--vax-ip` et `--origin` sont retenues elles aussi. Pour
+changer de carte, refaites `--install` avec la nouvelle. Pour tout retirer :
+`vax-bridge --uninstall`.
+
 ### 2. Brancher la page
 
 1. Dans la page, ouvrez la section **Réseau** et choisissez **Pont local**. L'adresse du

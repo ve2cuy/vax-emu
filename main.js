@@ -4,10 +4,10 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=e5ff1542';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=e5ff1542';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=997e44b3';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=997e44b3';
 
-const VERSION = '0.7.9';
+const VERSION = '0.8.0';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -1413,12 +1413,20 @@ showKeyBar();
 // le relais vax-bridge de ce PC (WebSocket) : le VAX y paraît avec sa propre adresse IP.
 const netUrl = document.getElementById('net-url');
 const netStatus = document.getElementById('net-status');
+// Lance le relais de ce PC par le protocole vaxbridge:// (enregistré une fois par
+// « vax-bridge --install --iface <carte> »). Le lien ne porte aucune option : le relais
+// prend celles de son installation. Le fil se rebranche tout seul (essai toutes les 5 s).
+const netLaunch = document.getElementById('net-launch');
+netLaunch.addEventListener('click', () => {
+  window.location.href = 'vaxbridge://start';
+});
 let netState = null;
 
 function showNet(state = netState) {
   netState = state;
   const bridge = prefs.netMode === 'bridge';
   document.getElementById('net-url-field').hidden = !bridge;
+  netLaunch.hidden = !bridge || state === 'open';
   for (const radio of document.querySelectorAll('input[name="net-mode"]')) radio.checked = radio.value === prefs.netMode;
   netStatus.textContent = !running || !state ? '' : t(`net.state.${state}`, { url: prefs.bridgeUrl });
 }

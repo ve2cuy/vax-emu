@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=e5ff1542">
-  <link rel="stylesheet" href="style.css?v=e5ff1542">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=997e44b3">
+  <link rel="stylesheet" href="style.css?v=997e44b3">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -169,6 +169,9 @@
             <label id="net-url-field" class="field"><span data-i18n="net.url">Relay address</span>
               <input id="net-url" type="url" spellcheck="false">
             </label>
+            <button id="net-launch" type="button" class="secondary small-button" hidden
+                    title="Starts vax-bridge on this PC. Install it once in a terminal: vax-bridge --install --iface <card>"
+                    data-i18n-title="net.launch.tip" data-i18n="net.launch">Launch the relay</button>
             <p id="net-status" class="hint"></p>
             <p class="hint" data-i18n="net.next">The network mode takes effect at the next power-on.</p>
             <details class="more">
@@ -540,7 +543,7 @@
       </div>
     </form>
   </dialog>
-  <script src="vendor/xterm/xterm.js?v=e5ff1542"></script>
-  <script type="module" src="main.js?v=e5ff1542"></script>
+  <script src="vendor/xterm/xterm.js?v=997e44b3"></script>
+  <script type="module" src="main.js?v=997e44b3"></script>
 </body>
 </html>

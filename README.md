@@ -133,6 +133,52 @@ On every system, `--iface` takes the card's name, your computer's IPv4 address o
 card, or a piece of the card's description; `vax-bridge --iface "?"` lists the cards. Leave
 the relay running: it prints `page branchée` when the page connects.
 
+### Launching the relay from the page (optional)
+
+Instead of starting the relay in a terminal every time, register it once: the **Network**
+section of the page, in **Local bridge** mode, then offers a **Launch the relay** button.
+On the first click the browser asks whether it may open vax-bridge: accept (and tick
+"always allow"). The relay starts with the options given at registration; the page
+connects to it by itself within a few seconds. If it is already running, the button does
+not start a second relay.
+
+First put the relay at its final location: the registration remembers its path. Then, in
+a terminal:
+
+**Windows**
+
+```
+vax-bridge --install --iface 192.168.2.11
+```
+
+The relay opens in a console window; close it to stop the relay.
+
+**Linux**
+
+```
+sudo setcap cap_net_raw,cap_net_admin=eip vax-bridge
+./vax-bridge --install --iface eth0
+```
+
+The first command lets the relay capture without `sudo` (the button cannot type a
+password). The registration creates `~/.local/share/applications/vax-bridge.desktop`
+(`xdg-utils` is needed); the relay opens in a terminal.
+
+**macOS**
+
+```
+./vax-bridge --install --iface en0
+```
+
+The registration creates the small application `~/Applications/VAX Bridge.app`. Each time
+it starts, macOS asks for the administrator password (the relay reads the cards through
+`/dev/bpf*`). The relay runs in the background; its log is `/tmp/vax-bridge.log`. To stop
+it: `sudo pkill vax-bridge`. Not tried on a real Mac yet.
+
+The `--port`, `--telnet`, `--vax-ip` and `--origin` options are remembered too. To change
+the card, run `--install` again with the new one. To remove everything:
+`vax-bridge --uninstall`.
+
 ### 2. Connect the page
 
 1. In the page, open the **Network** section and choose **Local bridge**. The relay
