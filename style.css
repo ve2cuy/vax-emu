@@ -1315,3 +1315,6 @@ a.icon-button { display: inline-flex; align-items: center; justify-content: cent
 .acc-privs th .acc-all { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .acc-login-open { margin-top: 10px; }
 #acc-login .files-text-wrap { min-height: 14rem; }
+.files-table .badge.warn { background: var(--error); color: #fff; }
+#acc-sec .acc-cmdline select { flex: 0 1 18em; width: auto; min-width: 8em; }
+#acc-sec .acc-cmdline input { flex: 1 1 18em; }

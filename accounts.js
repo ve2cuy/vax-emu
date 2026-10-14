@@ -8,14 +8,15 @@
 // REVOKE, SHOW, LIST /IDENTIFIER), proxys (ADD, MODIFY, REMOVE, SHOW, LIST, CREATE /PROXY) et
 // une ligne de commande libre pour le reste (CREATE /RIGHTS, MODIFY /SYSTEM_PASSWORD, HELP…).
 
-import { t } from './i18n.js?v=20221475';
-import { VmsSession, readText, saveText } from './vms-files.js?v=20221475';
-import { askLogin } from './files.js?v=20221475';
+import { t } from './i18n.js?v=c2e83ceb';
+import { VmsSession, readText, saveText } from './vms-files.js?v=c2e83ceb';
+import { askLogin } from './files.js?v=c2e83ceb';
 import {
   PRIVS, FLAGS, DAYS, MODES, QUOTAS, ID_ATTRS, fail, userName, idName, proxyName, password, uic, octal,
   idValue, isoDate, vmsDate, messages, parseBrief, parseUser, parseIdentifiers, parseRights, parseProxies,
-  modifyQualifiers, packCommands, freeCommand, quoted, loginFile,
-} from './uaf.js?v=20221475';
+  modifyQualifiers, packCommands, freeCommand, quoted, loginFile, groupOf, groupNames, nextMember, nextGroup,
+  PROT_CLASSES, PROT_RIGHTS, ACE_ACCESS, securityTarget, parseSecurity, protectionText, ownerSpec, aceText, safeAce,
+} from './uaf.js?v=c2e83ceb';
 
 const ACC_CHANNEL = 2;   // canal TCP du fil de la machine réservé à cette session
 const PROTECTED = ['SYSTEM', 'DEFAULT'];
@@ -32,6 +33,7 @@ const state = {
   editing: null,         // { isNew, before, rights }
   ids: [],
   id: '',
+  group: '',             // groupe choisi (octal)
   showUicIds: false,
   proxies: [],
   proxy: '',
@@ -148,16 +150,17 @@ function renderUsers() {
     onclick: () => { state.user = u.user; renderUsers(); },
     ondblclick: () => { state.user = u.user; editUser(); },
   },
-  el('td', {}, el('button', { type: 'button', class: 'file-name', text: u.user, onclick: () => { state.user = u.user; editUser(); } })),
+  el('td', {}, el('button', { type: 'button', class: 'file-name', text: u.user, onclick: () => { state.user = u.user; editUser(); } }),
+    u.dir === 'Disuser' ? el('span', { class: 'badge warn', title: t('acc.disuser.tip'), text: t('acc.disuser') }) : null),
   el('td', { text: u.owner }), el('td', { class: 'mono', text: u.uic }), el('td', { text: u.account }),
   el('td', { text: u.privs }), el('td', { class: 'num', text: String(u.prio) }),
-  el('td', { class: 'mono', text: u.dir === 'Disuser' ? t('acc.disuser') : u.dir }))));
+  el('td', { class: 'mono', text: u.dir === 'Disuser' ? '—' : u.dir }))));
   $('acc-user-count').textContent = t('acc.count', { n: state.users.length });
   updateTools();
 }
 
 /** Ouvre la fiche d'un compte (ou une fiche neuve, tirée de DEFAULT). */
-async function editUser(isNew = false) {
+async function editUser(isNew = false, preset = null) {
   const name = isNew ? 'DEFAULT' : state.user;
   if (!name) return;
   await guard(async () => {
@@ -170,6 +173,11 @@ async function editUser(isNew = false) {
     if (!state.ids.length) await loadIds().catch(() => {});
     state.editing = { isNew, before, rights };
     buildForm(before, isNew, rights);
+    if (isNew) {
+      const group = preset?.group ?? '300';
+      F.group.value = group;
+      F.member.value = preset?.member ?? nextMember(state.users, group);
+    }
     showPane('editor');
     status(isNew ? t('acc.new.hint') : '');
   });
@@ -220,7 +228,7 @@ function buildForm(r, isNew, rights) {
     el('label', { class: 'check' }, (F.pwdexpired = check(r.pwdexpired)), ' ', t('acc.f.pwdexpired')),
     isNew ? null : el('p', { class: 'hint', text: t('acc.f.facts', { change: r.pwdchange || '—', fails: r.loginFails || '0', last: r.lastLogin || '—' }) }));
   const flags = section(t('acc.sec.flags'),
-    el('div', { class: 'acc-checks' }, FLAGS.map((f) => el('label', { class: 'check', title: f }, (F.flags[f] = check(r.flags.includes(f))), ` ${f}`))));
+    el('div', { class: 'acc-checks' }, FLAGS.map((f) => el('label', { class: 'check', title: f }, (F.flags[f] = check(r.flags.includes(f) && !(isNew && f === 'DISUSER'))), ` ${f}`))));
   const hours = el('tr', {}, el('th', {}), el('th', { colspan: 24, text: t('acc.primary') }), el('th', { colspan: 24, text: t('acc.secondary') }));
   const nums = el('tr', {}, el('th', {}), ...[...Array(48)].map((_, i) => el('th', { class: 'hour', text: String(i % 24) })));
   const rowsAccess = MODES.map((mode) => {
@@ -320,6 +328,17 @@ function readForm(before) {
   };
 }
 
+/**
+ * UIC d'un compte : pas celle d'un autre compte (deux comptes seraient le même propriétaire);
+ * un groupe système (10 octal ou moins) donne des droits du système : à confirmer.
+ */
+function checkUic(name, rec) {
+  const want = uic(rec.group, rec.member);
+  const other = state.users.find((u) => u.user !== name && u.uic === want);
+  if (other) throw fail('uaf.uicUsed', `${want} ${other.user}`);
+  if (parseInt(want.slice(1), 8) <= 0o10 && !confirm(t('acc.uic.system', { uic: want }))) throw fail('uaf.cancelled');
+}
+
 async function saveUser() {
   const ed = state.editing;
   if (!ed) return;
@@ -333,10 +352,12 @@ async function saveUser() {
       if (!after.directory) after.directory = `[${name}]`;
       // ADD reprend DEFAULT : on ne donne que ce qui en diffère, et toujours l'UIC.
       const base = { ...ed.before, group: '', member: '', directory: '' };
+      checkUic(name, after);
       const quals = modifyQualifiers(base, after);
       cmds = packCommands(`MCR AUTHORIZE MODIFY ${name}`, quals);
       cmds[0] = cmds[0].replace(/^MCR AUTHORIZE MODIFY /, 'MCR AUTHORIZE ADD ');
     } else {
+      if (after.group !== ed.before.group || after.member !== ed.before.member) checkUic(name, after);
       const quals = modifyQualifiers(ed.before, after);
       if (!quals.length) {
         status(t('acc.nothing'));
@@ -397,6 +418,20 @@ async function saveLogin() {
     $('acc-login-name').textContent = spec;
     $('acc-login-info').textContent = t('acc.login.info', { user: state.editing?.before.user ?? '' });
     status(t('acc.login.saved', { spec }));
+  });
+}
+
+/** Active ou désactive le compte choisi (drapeau DISUSER : plus aucune connexion). */
+async function toggleUser() {
+  const u = state.users.find((x) => x.user === state.user);
+  if (!u) return;
+  if (PROTECTED.includes(u.user)) return status(t('acc.protected', { user: u.user }), true);
+  // SHOW /BRIEF met « Disuser » à la place du répertoire d'un compte désactivé.
+  const off = u.dir === 'Disuser';
+  await guard(async () => {
+    await uaf(`MODIFY ${u.user} /FLAGS=${off ? 'NODISUSER' : 'DISUSER'}`);
+    await loadUsers();
+    status(t(off ? 'acc.enabled' : 'acc.disabled', { user: u.user }));
   });
 }
 
@@ -666,6 +701,245 @@ async function removeProxy() {
   });
 }
 
+// ------------------------------------------------------------------ groupes d'UIC
+
+/** Groupes : ceux des comptes et ceux qui ont un nom (identificateur [g,*]). */
+function groupRows() {
+  const names = groupNames(state.ids);
+  const groups = new Map();
+  for (const u of state.users) {
+    const g = groupOf(u.uic);
+    if (!g) continue;
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(u);
+  }
+  for (const g of Object.keys(names)) if (!groups.has(g)) groups.set(g, []);
+  return [...groups.entries()].map(([group, users]) => ({ group, name: names[group] ?? '', users }))
+    .sort((a, b) => parseInt(a.group, 8) - parseInt(b.group, 8));
+}
+
+const selectedGroup = () => groupRows().find((r) => r.group === state.group);
+
+function renderGroups() {
+  const rows = groupRows();
+  if (!rows.some((r) => r.group === state.group)) state.group = '';
+  $('acc-grp-rows').replaceChildren(...rows.map((r) => el('tr', {
+    class: r.group === state.group ? 'selected' : '',
+    onclick: () => { state.group = r.group; renderGroups(); },
+  }, el('td', { class: 'num mono', text: r.group }), el('td', { class: 'mono', text: r.name || '—' }),
+  el('td', { class: 'mono', text: r.users.map((u) => `${u.user} ${u.uic}`).join(', ') }))));
+  updateTools();
+}
+
+async function loadGroups() {
+  await loadUsers();
+  await loadIds();
+  renderGroups();
+}
+
+async function newGroup() {
+  const v = await ask(t('acc.grp.newTitle'), [
+    { key: 'group', label: t('acc.grp.number'), value: nextGroup(state.users, state.ids), hint: t('acc.f.octal') },
+    { key: 'name', label: t('acc.grp.nameLabel'), hint: t('acc.grp.name.hint') },
+  ]);
+  if (!v) return;
+  await guard(async () => {
+    const group = octal(v.group, 0o37776, 'group');
+    const r = await uaf(`ADD /IDENTIFIER ${idName(v.name)} /VALUE=UIC:[${group},*]`);
+    state.group = group;
+    await loadGroups();
+    status(r.msgs.join(' '));
+  });
+}
+
+async function nameGroup() {
+  const grp = selectedGroup();
+  if (!grp) return;
+  const v = await ask(t('acc.grp.nameTitle', { group: grp.group }), [
+    { key: 'name', label: t('acc.grp.nameLabel'), value: grp.name, hint: t('acc.grp.name.hint') },
+  ]);
+  if (!v) return;
+  await guard(async () => {
+    const name = idName(v.name);
+    if (name === grp.name) return status(t('acc.nothing'));
+    const r = await uaf(grp.name ? `RENAME /IDENTIFIER ${grp.name} ${name}` : `ADD /IDENTIFIER ${name} /VALUE=UIC:[${grp.group},*]`);
+    await loadGroups();
+    status(r.msgs.join(' '));
+  });
+}
+
+async function unnameGroup() {
+  const grp = selectedGroup();
+  if (!grp?.name || !confirm(t('acc.grp.unname.confirm', { name: grp.name, group: grp.group }))) return;
+  await guard(async () => {
+    const r = await uaf(`REMOVE /IDENTIFIER ${grp.name}`);
+    await loadGroups();
+    status(r.msgs.join(' '));
+  });
+}
+
+async function addUserInGroup() {
+  const grp = selectedGroup();
+  if (!grp) return;
+  showTab('users');
+  await editUser(true, { group: grp.group, member: nextMember(state.users, grp.group) });
+}
+
+/** Change l'UIC d'un compte vers le groupe choisi; ses fichiers suivent si demandé. */
+async function moveUser() {
+  const grp = selectedGroup();
+  if (!grp) return;
+  const v = await ask(t('acc.grp.moveTitle', { group: grp.group }), [
+    { key: 'user', label: t('acc.f.user'), type: 'select',
+      options: state.users.filter((u) => groupOf(u.uic) !== grp.group && !PROTECTED.includes(u.user)).map((u) => [u.user, `${u.user} ${u.uic}`]) },
+    { key: 'member', label: t('acc.f.member'), value: nextMember(state.users, grp.group), hint: t('acc.f.octal') },
+    { key: 'files', label: t('acc.grp.moveFiles'), type: 'checkbox', value: true },
+  ]);
+  if (!v?.user) return;
+  await guard(async () => {
+    const user = userName(v.user);
+    const newUic = uic(grp.group, v.member);
+    const rec = parseUser((await uaf(`SHOW ${user}`)).lines);
+    await uaf(`MODIFY ${user} /UIC=${newUic}`);
+    let note = '';
+    if (v.files && rec?.device && rec.directory) {
+      const target = securityTarget(`${rec.device}${rec.directory}`);
+      const r = await dcl(`SET SECURITY/OWNER=${newUic} ${target.spec}`);
+      // Répertoire vide : « aucun fichier trouvé » n'est pas une erreur.
+      if (r.ok) await dcl(`SET SECURITY/OWNER=${newUic} ${target.contents}`);
+      note = r.ok ? ` ${t('acc.grp.filesDone', { dir: `${rec.device}${rec.directory}` })}` : ` ${messages(r.lines).join(' ')}`;
+    }
+    state.user = user;
+    await loadGroups();
+    status(t('acc.grp.moved', { user, uic: newUic }) + note);
+  });
+}
+
+// ------------------------------------------------------------------ droits des fichiers
+
+let sec = null;          // {target, info} : l'objet lu par SHOW SECURITY
+
+/** Liste « répertoire d'un compte » : les comptes dont SHOW /BRIEF donne le répertoire. */
+function fillSecUsers() {
+  const sel = $('acc-sec-user');
+  const keep = sel.value;
+  sel.replaceChildren(el('option', { value: '', text: t('acc.sec.pick') }),
+    ...state.users.filter((u) => /:\[/.test(u.dir)).map((u) => el('option', { value: u.dir, text: `${u.user} — ${u.dir}` })));
+  sel.value = keep;
+}
+
+async function readSecurity(raw = null) {
+  await guard(async () => {
+    const text = (raw ?? $('acc-sec-target').value).trim().toUpperCase();
+    const target = securityTarget(text);
+    $('acc-sec-target').value = text;
+    status(t('acc.loading'));
+    const r = await dcl(`SHOW SECURITY ${target.spec}`);
+    const info = parseSecurity(r.lines)[0];
+    if (!info) throw fail('uaf.vms', messages(r.lines).join(' ') || r.lines.join(' '));
+    sec = { target, info };
+    buildSec();
+    status('');
+  });
+}
+
+function buildSec() {
+  const { target, info } = sec;
+  // Suggestions : propriétaires (comptes) et identificateurs d'ACL (comptes, groupes nommés, généraux).
+  const names = groupNames(state.ids);
+  const owners = el('datalist', { id: 'acc-sec-owners' }, ...state.users.map((u) => el('option', { value: u.user })));
+  const aceIds = el('datalist', { id: 'acc-sec-ids' }, ...state.users.map((u) => el('option', { value: u.user })),
+    ...Object.values(names).map((n) => el('option', { value: `[${n},*]` })),
+    ...state.ids.filter((i) => i.value.startsWith('%X')).map((i) => el('option', { value: i.name })));
+  const owner = text(info.owner, { list: 'acc-sec-owners' });
+  const boxes = {};
+  const grid = el('table', { class: 'prot-table' },
+    el('thead', {}, el('tr', {}, el('th', {}), ...PROT_RIGHTS.map((x) => el('th', { text: t(`fs.right.${x}`) })))),
+    el('tbody', {}, ...PROT_CLASSES.map((c) => el('tr', {}, el('th', { text: t(`fs.class.${c}`) }),
+      ...PROT_RIGHTS.map((x) => el('td', {}, (boxes[`${c}${x}`] = check(info.prot[c].includes(x)))))))));
+  const recurse = target.isDir ? check(false) : null;
+  const ident = el('div', { class: 'acc-grid' },
+    el('label', { class: 'field' }, el('span', { text: t('acc.sec.owner') }), owner, el('small', { class: 'hint', text: t('acc.sec.owner.hint') })));
+  const props = el('details', { class: 'acc-section', open: true }, el('summary', { text: t('acc.sec.object', { spec: info.spec }) }),
+    el('div', { class: 'acc-section-body' }, ident,
+      el('fieldset', { class: 'field' }, el('legend', { text: t('acc.sec.protection') }), grid),
+      recurse ? el('label', { class: 'check' }, recurse, ` ${t('acc.sec.recurse', { contents: target.contents })}`) : null,
+      el('div', { class: 'dialog-actions' }, el('button', { type: 'button', id: 'acc-sec-save', text: t('acc.sec.save'),
+        onclick: () => saveSec(owner.value, Object.fromEntries(PROT_CLASSES.map((c) => [c, PROT_RIGHTS.filter((x) => boxes[`${c}${x}`].checked).join('')])), recurse?.checked) }))));
+  // ACL : entrées existantes (retirer) et nouvelle entrée.
+  const aceId = text('', { list: 'acc-sec-ids', placeholder: 'JDOE, [300,*], [ETUDIANTS,*]' });
+  const access = ACE_ACCESS.map((a) => [a, check(a === 'READ' || a === 'EXECUTE')]);
+  const def = target.isDir ? check(false) : null;
+  const acl = el('details', { class: 'acc-section', open: true }, el('summary', { text: t('acc.sec.acl') }),
+    el('div', { class: 'acc-section-body' },
+      el('p', { class: 'hint', text: t('acc.sec.acl.hint') }),
+      info.acl.length
+        ? el('ul', { class: 'acc-rights' }, info.acl.map((a) => el('li', {}, el('code', { text: a }), ' ',
+          el('button', { type: 'button', class: 'secondary small-button', text: t('acc.sec.ace.del'), onclick: () => delAce(a) }))))
+        : el('p', { class: 'hint', text: t('acc.sec.acl.empty') }),
+      el('div', { class: 'acc-grid' }, el('label', { class: 'field' }, el('span', { text: t('acc.sec.ace.id') }), aceId)),
+      el('div', { class: 'acc-checks' }, access.map(([a, c]) => el('label', { class: 'check' }, c, ` ${a}`)),
+        def ? el('label', { class: 'check', title: t('acc.sec.ace.default.tip') }, def, ` ${t('acc.sec.ace.default')}`) : null),
+      el('div', { class: 'dialog-actions' },
+        el('button', { type: 'button', id: 'acc-sec-ace-add', text: t('acc.sec.ace.add'),
+          onclick: () => addAce(aceId.value, access.filter(([, c]) => c.checked).map(([a]) => a), def?.checked) }),
+        el('span', { class: 'spacer' }),
+        info.acl.length ? el('button', { type: 'button', class: 'secondary', text: t('acc.sec.acl.clear'), onclick: clearAcl }) : null)));
+  $('acc-sec-body').replaceChildren(owners, aceIds, props, acl);
+}
+
+async function secRun(cmd) {
+  const r = await state.session.run([cmd]);
+  const bad = messages(r.lines).filter((m) => /-[EF]-/.test(m) || (/-W-/.test(m) && !/SEARCHFAIL|NOFILES|-W-NOSUCHFILE/.test(m)));
+  if (!r.ok && bad.length) throw fail('uaf.vms', bad.join(' '));
+  return r;
+}
+
+async function saveSec(ownerText, prot, recurse) {
+  const { target, info } = sec;
+  await guard(async () => {
+    const quals = [];
+    const all = [];
+    const owner = ownerText.trim().toUpperCase();
+    if (owner) all.push(`/OWNER=${ownerSpec(owner)}`);
+    if (owner && owner !== info.owner.toUpperCase()) quals.push(`/OWNER=${ownerSpec(owner)}`);
+    const pt = protectionText(prot);
+    all.push(`/PROTECTION=${pt}`);
+    if (pt !== protectionText(info.prot)) quals.push(`/PROTECTION=${pt}`);
+    if (!quals.length && !recurse) return status(t('acc.nothing'));
+    status(t('acc.saving'));
+    if (quals.length) await secRun(`SET SECURITY${quals.join('')} ${target.spec}`);
+    if (recurse) await secRun(`SET SECURITY${all.join('')} ${target.contents}`);
+    await readSecurity($('acc-sec-target').value);
+    status(t(recurse ? 'acc.sec.savedAll' : 'acc.sec.saved', { spec: target.spec }));
+  });
+}
+
+async function addAce(id, access, isDefault) {
+  await guard(async () => {
+    await secRun(`SET SECURITY/ACL=${aceText(id, access, isDefault)} ${sec.target.spec}`);
+    await readSecurity($('acc-sec-target').value);
+    status(t('acc.sec.saved', { spec: sec.target.spec }));
+  });
+}
+
+async function delAce(ace) {
+  await guard(async () => {
+    await secRun(`SET SECURITY/ACL=${safeAce(ace)}/DELETE ${sec.target.spec}`);
+    await readSecurity($('acc-sec-target').value);
+    status(t('acc.sec.saved', { spec: sec.target.spec }));
+  });
+}
+
+async function clearAcl() {
+  if (!confirm(t('acc.sec.acl.clear.confirm', { spec: sec.target.spec }))) return;
+  await guard(async () => {
+    await secRun(`SET SECURITY/ACL/DELETE ${sec.target.spec}`);
+    await readSecurity($('acc-sec-target').value);
+    status(t('acc.sec.saved', { spec: sec.target.spec }));
+  });
+}
+
 // ------------------------------------------------------------------ commande libre
 
 function showOutput(head, body, name = 'authorize.txt') {
@@ -740,7 +1014,10 @@ function ask(title, fields) {
 
 // ------------------------------------------------------------------ affichage
 
-const PANES = { users: 'acc-users', editor: 'acc-editor', login: 'acc-login', ids: 'acc-ids', proxies: 'acc-proxies', cmd: 'acc-cmdpane' };
+const PANES = {
+  users: 'acc-users', editor: 'acc-editor', login: 'acc-login', groups: 'acc-groups', ids: 'acc-ids',
+  proxies: 'acc-proxies', sec: 'acc-sec', cmd: 'acc-cmdpane',
+};
 
 function showPane(name) {
   for (const [p, id] of Object.entries(PANES)) $(id).hidden = p !== name;
@@ -751,6 +1028,8 @@ function showTab(tab) {
   for (const b of document.querySelectorAll('#accounts .acc-tab')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
   if (tab !== 'users') state.editing = null;
   showPane(tab);
+  if (tab === 'groups') renderGroups();
+  if (tab === 'sec') fillSecUsers();
 }
 
 function updateTools() {
@@ -760,7 +1039,14 @@ function updateTools() {
     'acc-proxy-add', 'acc-proxy-list', 'acc-run', 'acc-help', 'acc-proxy-create']) $(id).disabled = !on;
   for (const id of ['acc-edit', 'acc-copy']) $(id).disabled = !on || !u;
   $('acc-login-save').disabled = !on;
-  for (const id of ['acc-rename', 'acc-remove']) $(id).disabled = !on || !u || PROTECTED.includes(u);
+  const g = selectedGroup();
+  for (const b of ['acc-grp-refresh', 'acc-grp-new', 'acc-sec-read']) $(b).disabled = !on;
+  for (const b of ['acc-grp-name', 'acc-grp-adduser', 'acc-grp-move', 'acc-grp-rights']) $(b).disabled = !on || !g;
+  $('acc-grp-unname').disabled = !on || !g?.name;
+  for (const id of ['acc-rename', 'acc-remove', 'acc-toggle']) $(id).disabled = !on || !u || PROTECTED.includes(u);
+  const off = state.users.find((x) => x.user === u)?.dir === 'Disuser';
+  $('acc-toggle-label').dataset.i18n = off ? 'acc.enable' : 'acc.disable';
+  $('acc-toggle-label').textContent = t(off ? 'acc.enable' : 'acc.disable');
   const id = selectedId();
   for (const b of ['acc-id-modify', 'acc-id-rename', 'acc-id-remove', 'acc-id-grant']) $(b).disabled = !on || !id;
   $('acc-id-revoke').disabled = !on || !id?.holders.length;
@@ -788,6 +1074,8 @@ async function refreshAll(withStatus = true) {
     await loadUsers();
     await loadIds();
     await loadProxies();
+    renderGroups();
+    fillSecUsers();
     if (withStatus) status(t('acc.mode.on', { user: state.session.user }));
   });
 }
@@ -908,6 +1196,7 @@ export function initAccounts(context) {
   $('acc-refresh').addEventListener('click', () => guard(loadUsers));
   $('acc-new').addEventListener('click', () => editUser(true));
   $('acc-edit').addEventListener('click', () => editUser());
+  $('acc-toggle').addEventListener('click', toggleUser);
   $('acc-copy').addEventListener('click', copyUser);
   $('acc-rename').addEventListener('click', renameUser);
   $('acc-remove').addEventListener('click', removeUser);
@@ -922,6 +1211,32 @@ export function initAccounts(context) {
     state.editing = null;
     showPane('users');
     status('');
+  });
+  $('acc-grp-refresh').addEventListener('click', () => guard(loadGroups));
+  $('acc-grp-new').addEventListener('click', newGroup);
+  $('acc-grp-name').addEventListener('click', nameGroup);
+  $('acc-grp-unname').addEventListener('click', unnameGroup);
+  $('acc-grp-adduser').addEventListener('click', addUserInGroup);
+  $('acc-grp-move').addEventListener('click', moveUser);
+  $('acc-grp-rights').addEventListener('click', () => {
+    // Le répertoire du premier compte du groupe (s'il est connu), sinon la liste à choisir.
+    const dir = selectedGroup()?.users.map((u) => u.dir).find((d) => /:\[/.test(d));
+    showTab('sec');
+    fillSecUsers();
+    if (dir) {
+      $('acc-sec-user').value = dir;
+      readSecurity(dir);
+    }
+  });
+  $('acc-sec-read').addEventListener('click', () => readSecurity());
+  $('acc-sec-target').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      readSecurity();
+    }
+  });
+  $('acc-sec-user').addEventListener('change', () => {
+    if ($('acc-sec-user').value) readSecurity($('acc-sec-user').value);
   });
   $('acc-uic-ids').addEventListener('change', () => {
     state.showUicIds = $('acc-uic-ids').checked;
@@ -972,4 +1287,4 @@ export function initAccounts(context) {
 }
 
 // Pour les essais (tools/chrome/accounts_check.py) : les analyseurs et constructeurs.
-export const testing = { buildForm, loginFile, parseBrief, parseUser, parseIdentifiers, parseRights, parseProxies, modifyQualifiers, packCommands, quoted, octal };
+export const testing = { buildForm, loginFile, groupRows: () => groupRows(), parseBrief, parseUser, parseIdentifiers, parseRights, parseProxies, modifyQualifiers, packCommands, quoted, octal };

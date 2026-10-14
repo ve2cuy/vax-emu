@@ -344,8 +344,17 @@ marche avec TCP/IP; le mot de passe sert à la connexion et n'est pas gardé.
   CLI, procédure de connexion, mot de passe et sa durée, expiration, drapeaux, jours
   principaux, heures d'accès par mode (réseau, lots, local, ligne commutée, distant),
   quotas, privilèges autorisés et par défaut, identificateurs détenus. Nouveau compte
-  (`ADD`, à partir de DEFAULT, avec la création de son répertoire), copie (`COPY`),
-  renommage (`RENAME`), suppression (`REMOVE`), listage (`LIST`).
+  (`ADD`, à partir de DEFAULT mais actif et avec une UIC libre, avec la création de son
+  répertoire), activer ou désactiver (`DISUSER`), copie (`COPY`), renommage (`RENAME`),
+  suppression (`REMOVE`), listage (`LIST`). Depuis la fiche : modifier la procédure de
+  connexion du compte (`LOGIN.COM`, créée d'un modèle si elle n'existe pas).
+- **Groupes** : les groupes d'UIC (`[300,1]` : groupe 300) avec leurs comptes; nommer un
+  groupe (identificateur `[300,*]`), le renommer, retirer son nom; nouveau compte dans un
+  groupe; y déplacer un compte (`MODIFY /UIC`), ses fichiers suivant (`SET SECURITY/OWNER`).
+- **Droits des fichiers** : propriétaire et protection (Système, Propriétaire, Groupe,
+  Monde) d'un fichier ou d'un répertoire, au besoin de tout son contenu, et sa liste de
+  contrôle d'accès (ACL : ajouter ou retirer une entrée pour un compte, un groupe ou un
+  identificateur, `OPTIONS=DEFAULT` pour les nouveaux fichiers d'un répertoire).
 - **Identificateurs** : ajout, attributs, renommage, suppression, accorder et révoquer à un
   compte (`ADD`, `MODIFY`, `RENAME`, `REMOVE`, `GRANT`, `REVOKE /IDENTIFIER`), détenteurs,
   listage.

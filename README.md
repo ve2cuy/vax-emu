@@ -327,8 +327,17 @@ password is used to log in and is not kept.
   `DEFAULT` for the DEFAULT record): owner, UIC, device and directory, CLI, login command
   file, password and its lifetime, expiration, flags, primary days, access hours per mode
   (network, batch, local, dialup, remote), quotas, authorized and default privileges,
-  identifiers held. New account (`ADD`, starting from DEFAULT, with its directory created),
-  copy (`COPY`), rename (`RENAME`), remove (`REMOVE`), listing (`LIST`).
+  identifiers held. New account (`ADD`, starting from DEFAULT but enabled and with a free
+  UIC, with its directory created), activate or deactivate (`DISUSER`), copy (`COPY`),
+  rename (`RENAME`), remove (`REMOVE`), listing (`LIST`). From the record: edit the
+  account's login procedure (`LOGIN.COM`, created from a model if it does not exist).
+- **Groups**: the UIC groups (`[300,1]`: group 300) with their accounts; name a group
+  (identifier `[300,*]`), rename it, remove its name; new account in a group; move an
+  account into it (`MODIFY /UIC`), its files following (`SET SECURITY/OWNER`).
+- **File rights**: owner and protection (System, Owner, Group, World) of a file or
+  directory, of all its contents if needed, and its access control list (ACL: add or
+  remove an entry for an account, a group or an identifier, `OPTIONS=DEFAULT` for the new
+  files of a directory).
 - **Identifiers**: add, attributes, rename, remove, grant to and revoke from an account
   (`ADD`, `MODIFY`, `RENAME`, `REMOVE`, `GRANT`, `REVOKE /IDENTIFIER`), holders, listing.
 - **Proxies** (DECnet): create the database (`CREATE /PROXY`), add, default account,

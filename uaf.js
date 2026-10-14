@@ -470,6 +470,134 @@ export function loginFile(lgicmd, dev, dir) {
   return { dir: `${device}${directory}`, name: `${m[3]}${m[4] && m[4] !== '.' ? m[4] : '.COM'}` };
 }
 
+// ------------------------------------------------------------------ groupes d'UIC
+
+/** « [300,1] » → « 300 » (groupe en octal), ou '' pour une UIC donnée par nom. */
+export function groupOf(uicText) {
+  const m = /^\[0*([0-7]+),[0-7]+\]$/.exec(String(uicText ?? ''));
+  return m ? (m[1] === '' ? '0' : m[1]) : '';
+}
+
+/** Nom d'un groupe : identificateur de valeur [ggg,177777] (ADD /IDENTIFIER /VALUE=UIC:[g,*]). */
+export function groupNames(ids) {
+  const out = {};
+  for (const i of ids) {
+    const m = /^\[0*([0-7]*),177777\]$/.exec(i.value);
+    if (m) out[m[1] || '0'] = i.name;
+  }
+  return out;
+}
+
+/** Plus petit membre libre (octal, à partir de 1) dans le groupe `group`. */
+export function nextMember(users, group) {
+  const used = new Set(users.filter((u) => groupOf(u.uic) === group).map((u) => parseInt(/,([0-7]+)\]/.exec(u.uic)[1], 8)));
+  let m = 1;
+  while (used.has(m)) m++;
+  return m.toString(8);
+}
+
+/** Premier groupe libre à partir de 300 (octal), hors comptes et noms de groupes. */
+export function nextGroup(users, ids) {
+  const used = new Set([...users.map((u) => groupOf(u.uic)), ...Object.keys(groupNames(ids))].filter(Boolean).map((g) => parseInt(g, 8)));
+  let g = 0o300;
+  while (used.has(g)) g++;
+  return g.toString(8);
+}
+
+// ------------------------------------------------------------------ sécurité des fichiers
+
+export const PROT_CLASSES = ['S', 'O', 'G', 'W'];
+export const PROT_RIGHTS = ['R', 'W', 'E', 'D'];
+export const ACE_ACCESS = ['READ', 'WRITE', 'EXECUTE', 'DELETE', 'CONTROL'];
+
+/**
+ * Fichier ou répertoire visé : « DEV:[A.B] » (le répertoire : DEV:[A]B.DIR;1) ou
+ * « DEV:[A]X.TXT;n ». Rend {spec, isDir, contents} : contents désigne tout ce qu'un
+ * répertoire contient, sous-répertoires compris (« DEV:[A.B...]*.*;* »).
+ */
+export function securityTarget(s) {
+  const v = String(s ?? '').trim().toUpperCase();
+  const m = /^([A-Z0-9$_]{1,31}:)\[([A-Z0-9$_-]{1,39}(?:\.[A-Z0-9$_-]{1,39}){0,7})\]([A-Z0-9$_-]{0,39}\.[A-Z0-9$_-]{0,39}(?:;\d{0,5})?)?$/.exec(v);
+  if (!m) throw fail('uaf.badSpec', s);
+  const [, dev, path, file] = m;
+  if (!file) {
+    if (path === '000000') return { spec: `${dev}[000000]000000.DIR;1`, isDir: true, contents: `${dev}[000000...]*.*;*` };
+    const parts = path.split('.');
+    const last = parts.pop();
+    return { spec: `${dev}[${parts.length ? parts.join('.') : '000000'}]${last}.DIR;1`, isDir: true, contents: `${dev}[${path}...]*.*;*` };
+  }
+  const dir = /^([A-Z0-9$_-]+)\.DIR(;\d*)?$/.exec(file);
+  if (!dir) return { spec: `${dev}[${path}]${file}`, isDir: false, contents: '' };
+  const inner = path === '000000' ? dir[1] : `${path}.${dir[1]}`;
+  return { spec: `${dev}[${path}]${dir[1]}.DIR;1`, isDir: true, contents: `${dev}[${inner}...]*.*;*` };
+}
+
+/** SHOW SECURITY : [{spec, owner, prot: {S, O, G, W}, acl: [texte d'une entrée]}]. */
+export function parseSecurity(lines) {
+  const out = [];
+  let cur = null;
+  let inAcl = false;
+  for (const raw of lines) {
+    const line = trimEnd(raw);
+    let m;
+    if ((m = /^(\S+) object of class FILE$/.exec(line))) {
+      cur = { spec: m[1], owner: '', prot: { S: '', O: '', G: '', W: '' }, acl: [] };
+      out.push(cur);
+      inAcl = false;
+    } else if (!cur) {
+      continue;
+    } else if ((m = /^\s+Owner:\s+(.*)$/.exec(line))) {
+      cur.owner = m[1].trim();
+    } else if ((m = /^\s+Protection:\s+\((.*)\)$/.exec(line))) {
+      for (const part of m[1].split(',')) {
+        const p = /^\s*(System|Owner|Group|World)(?::\s*([RWED]*))?\s*$/.exec(part);
+        if (p) cur.prot[p[1][0]] = p[2] ?? '';
+      }
+    } else if (/^\s+Access Control List:/.test(line)) {
+      inAcl = !/<empty>/.test(line);
+    } else if (inAcl && (m = /^\s+(\(.*\))$/.exec(line))) {
+      cur.acl.push(m[1]);
+    }
+  }
+  return out;
+}
+
+/** {S: 'RWED', …} → « (S:RWED,O:RWED,G:RE,W) » (une classe vide s'écrit sans « : »). */
+export function protectionText(prot) {
+  return `(${PROT_CLASSES.map((c) => {
+    const r = PROT_RIGHTS.filter((x) => (prot[c] ?? '').includes(x)).join('');
+    return r ? `${c}:${r}` : c;
+  }).join(',')})`;
+}
+
+/** Propriétaire : nom d'un compte ou d'un identificateur d'UIC, ou UIC « [g,m] ». */
+export function ownerSpec(s) {
+  const v = String(s ?? '').trim().toUpperCase();
+  const m = /^\[([0-7]{1,6}),([0-7]{1,6})\]$/.exec(v);
+  if (m) return uic(m[1], m[2]);
+  if (/^\[[A-Z0-9$_]{1,31}(,[A-Z0-9$_]{1,31})?\]$/.test(v)) return v;
+  return idName(v);
+}
+
+/** Identificateur d'une entrée d'ACL : nom, UIC [g,m] ou [g,*], ou [NOM,*]. */
+function aceId(s) {
+  const v = String(s ?? '').trim().toUpperCase();
+  if (/^\[([0-7]{1,6}|[A-Z0-9$_]{1,31}),([0-7]{1,6}|\*|[A-Z0-9$_]{1,31})\]$/.test(v) || /^\[[A-Z0-9$_]{1,31}\]$/.test(v)) return v;
+  return idName(v);
+}
+
+/** Entrée d'ACL « (IDENTIFIER=x[,OPTIONS=DEFAULT],ACCESS=READ+…) ». */
+export function aceText(id, access, isDefault = false) {
+  const a = ACE_ACCESS.filter((x) => access.includes(x));
+  return `(IDENTIFIER=${aceId(id)}${isDefault ? ',OPTIONS=DEFAULT' : ''},ACCESS=${a.length ? a.join('+') : 'NONE'})`;
+}
+
+/** Entrée d'ACL lue par SHOW SECURITY, remise telle quelle dans SET SECURITY /DELETE. */
+export function safeAce(s) {
+  if (!/^\([A-Z0-9$_=,+[\]*:.-]{1,200}\)$/.test(String(s ?? ''))) throw fail('uaf.badAce', s);
+  return s;
+}
+
 /** Commande libre d'AUTHORIZE : verbe connu, rien d'interactif ni de DCL. */
 export function freeCommand(s) {
   const v = String(s ?? '').trim().replace(/^UAF>\s*/i, '');

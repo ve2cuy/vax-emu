@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=20221475">
-  <link rel="stylesheet" href="style.css?v=20221475">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=c2e83ceb">
+  <link rel="stylesheet" href="style.css?v=c2e83ceb">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -567,8 +567,10 @@
     </div>
     <div class="acc-tabs" role="tablist">
       <button type="button" class="acc-tab" role="tab" data-tab="users" aria-selected="true" data-i18n="acc.tab.users">Accounts</button>
+      <button type="button" class="acc-tab" role="tab" data-tab="groups" aria-selected="false" data-i18n="acc.tab.groups">Groups</button>
       <button type="button" class="acc-tab" role="tab" data-tab="ids" aria-selected="false" data-i18n="acc.tab.ids">Identifiers</button>
       <button type="button" class="acc-tab" role="tab" data-tab="proxies" aria-selected="false" data-i18n="acc.tab.proxies">Proxies</button>
+      <button type="button" class="acc-tab" role="tab" data-tab="sec" aria-selected="false" data-i18n="acc.tab.sec">File rights</button>
       <button type="button" class="acc-tab" role="tab" data-tab="cmd" aria-selected="false" data-i18n="acc.tab.cmd">AUTHORIZE command</button>
     </div>
     <div id="acc-users" class="acc-pane">
@@ -577,6 +579,7 @@
         <span class="toolbar-sep" aria-hidden="true"></span>
         <button id="acc-new" type="button" class="secondary with-icon" title="ADD" ><svg class="icon"><use href="#i-plus"/></svg><span data-i18n="acc.new">New account</span></button>
         <button id="acc-edit" type="button" class="secondary with-icon" title="SHOW, MODIFY"><svg class="icon"><use href="#i-edit"/></svg><span data-i18n="acc.edit">Open</span></button>
+        <button id="acc-toggle" type="button" class="secondary with-icon" title="MODIFY /FLAGS=[NO]DISUSER"><svg class="icon"><use href="#i-power"/></svg><span id="acc-toggle-label" data-i18n="acc.disable">Deactivate</span></button>
         <button id="acc-copy" type="button" class="secondary with-icon" title="COPY"><svg class="icon"><use href="#i-copy"/></svg><span data-i18n="fs.copy">Copy</span></button>
         <button id="acc-rename" type="button" class="secondary with-icon" title="RENAME"><svg class="icon"><use href="#i-rename"/></svg><span data-i18n="fs.rename">Rename</span></button>
         <button id="acc-remove" type="button" class="secondary with-icon" title="REMOVE"><svg class="icon"><use href="#i-trash"/></svg><span data-i18n="fs.delete">Delete</span></button>
@@ -618,6 +621,36 @@
         <span class="spacer"></span>
         <button id="acc-login-back" type="button" class="secondary" data-i18n="acc.login.back">Back to the account</button>
       </div>
+    </div>
+    <div id="acc-groups" class="acc-pane" hidden>
+      <div class="files-tools">
+        <button id="acc-grp-refresh" type="button" class="secondary with-icon"><svg class="icon"><use href="#i-refresh"/></svg><span data-i18n="fs.refresh">Refresh</span></button>
+        <span class="toolbar-sep" aria-hidden="true"></span>
+        <button id="acc-grp-new" type="button" class="secondary with-icon" title="ADD /IDENTIFIER /VALUE=UIC:[g,*]"><svg class="icon"><use href="#i-plus"/></svg><span data-i18n="acc.grp.new">New group</span></button>
+        <button id="acc-grp-name" type="button" class="secondary with-icon" title="ADD, RENAME /IDENTIFIER"><svg class="icon"><use href="#i-rename"/></svg><span data-i18n="acc.grp.name">Name</span></button>
+        <button id="acc-grp-unname" type="button" class="secondary with-icon" title="REMOVE /IDENTIFIER"><svg class="icon"><use href="#i-trash"/></svg><span data-i18n="acc.grp.unname">Remove the name</span></button>
+        <span class="toolbar-sep" aria-hidden="true"></span>
+        <button id="acc-grp-adduser" type="button" class="secondary with-icon" title="ADD"><svg class="icon"><use href="#i-users"/></svg><span data-i18n="acc.grp.addUser">New account in this group</span></button>
+        <button id="acc-grp-move" type="button" class="secondary with-icon" title="MODIFY /UIC"><svg class="icon"><use href="#i-edit"/></svg><span data-i18n="acc.grp.move">Move an account here</span></button>
+        <button id="acc-grp-rights" type="button" class="secondary with-icon"><svg class="icon"><use href="#i-folder"/></svg><span data-i18n="acc.grp.rights">Directory rights</span></button>
+      </div>
+      <p class="hint" data-i18n="acc.grp.hint"></p>
+      <div class="files-scroll files-list">
+        <table class="files-table">
+          <thead><tr><th class="num" data-i18n="acc.grp.number">Group</th><th data-i18n="acc.id.name">Name</th><th data-i18n="acc.grp.members">Accounts (UIC)</th></tr></thead>
+          <tbody id="acc-grp-rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="acc-sec" class="acc-pane" hidden>
+      <p class="hint" data-i18n="acc.sec.hint"></p>
+      <div class="acc-cmdline">
+        <input id="acc-sec-target" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="SYS$SYSDEVICE:[JDOE]"
+               aria-label="File or directory" data-i18n-aria="acc.sec.target">
+        <select id="acc-sec-user" aria-label="Directory of an account" data-i18n-aria="acc.sec.userDir"></select>
+        <button id="acc-sec-read" type="button" data-i18n="acc.sec.read">Read</button>
+      </div>
+      <div id="acc-sec-body" class="acc-form"></div>
     </div>
     <div id="acc-ids" class="acc-pane" hidden>
       <div class="files-tools">
@@ -703,7 +736,7 @@
       </div>
     </form>
   </dialog>
-  <script src="vendor/xterm/xterm.js?v=20221475"></script>
-  <script type="module" src="main.js?v=20221475"></script>
+  <script src="vendor/xterm/xterm.js?v=c2e83ceb"></script>
+  <script type="module" src="main.js?v=c2e83ceb"></script>
 </body>
 </html>
