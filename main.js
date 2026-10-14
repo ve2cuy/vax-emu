@@ -4,10 +4,10 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=9a347275';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=9a347275';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=ac008b42';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=ac008b42';
 
-const VERSION = '0.8.1';
+const VERSION = '0.9.0';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -38,7 +38,7 @@ const prefs = {
   mem: 64,           // mémoire (Mo)
   // 'microvax', 'server', 'station' (VAXstation : carte graphique monochrome QVSS) ou 'gpx'
   // (carte couleur QDSS : la console passe sur l'écran graphique).
-  model: 'microvax',
+  model: 'station',
   fontSize: 16,
   fontFamily: '',    // police du terminal ('' : celle par défaut)
   keyBar: null,      // touches à l'écran (null : seulement sur un écran tactile)

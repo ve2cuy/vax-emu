@@ -1,8 +1,11 @@
-# Émulateur VAX 4000
+# Émulateur VAXstation 3900
 
 Un émulateur VAX qui s'exécute dans votre fureteur, écrit en Rust et compilé en
-WebAssembly. Il installe et fait tourner **OpenVMS VAX**, comme sur un VAX 4000
-modèle 200.
+WebAssembly. C'est une **VAXstation 3900**, le poste de travail graphique CVAX de DEC : il
+installe et fait tourner **OpenVMS VAX**, avec son bureau graphique **DECwindows Motif**.
+
+Vous découvrez le VAX? Le [guide pas à pas](docs/GUIDE_FR.md) vous mène d'un fureteur
+vide à un système OpenVMS en marche, sans connaissance préalable.
 
 **L'essayer : <https://ve2cuy.github.io/vax-emu/>** · [English version](README.md)
 
@@ -13,14 +16,20 @@ modèle 200.
 - **Processeur** : jeu d'instructions complet du CVAX (entiers, virgule flottante F/D/G,
   chaînes, files, gestion de la mémoire, exceptions et interruptions). Il réussit le
   diagnostic DEC *Hardware Core Instruction* (EHKAA).
-- **Machine** : KA655 (MicroVAX 3900 / VAXserver 3900) — mémoire jusqu'à 512 Mo, ligne
-  série de la console, temporisateurs, horloge, adaptateur Qbus.
+- **Machine** : carte processeur KA655, présentée comme une **VAXstation 3900** (aussi
+  offertes : VAXstation 3900/GPX en couleur, MicroVAX 3900, VAXserver 3900) — mémoire
+  jusqu'à 512 Mo, ligne série de la console, temporisateurs, horloge, adaptateur Qbus.
+- **Graphisme** : carte QVSS monochrome ou QDSS couleur, clavier LK201 et souris :
+  **DECwindows Motif** fonctionne.
 - **Disques** : contrôleur MSCP à quatre lecteurs (DUA0-DUA3) : disques RA et un CD-ROM
   RRD40. **OpenVMS VAX V7.1 s'installe depuis son CD**, démarre et accepte les connexions.
 - **Réseau** : contrôleur Ethernet DELQA (XQA0) sur un réseau virtuel privé.
-  **CMU-OpenVMS/IP** (TCP/IP) s'installe et fonctionne.
+  **CMU-OpenVMS/IP** et **DEC TCP/IP Services** (UCX) s'installent et fonctionnent; un
+  pont local met le VAX sur votre propre réseau.
 - **Telnet** : un deuxième terminal dans la page ouvre des sessions telnet vers le VAX.
-- **À venir** : l'identité du VAX 4000-200 (KA660).
+- **Gestionnaire de fichiers** : parcourir et modifier les fichiers d'un disque OpenVMS
+  depuis la page.
+- **À venir** : un interpréteur plus rapide et la sauvegarde de l'état de la machine.
 
 ## Pour commencer
 
@@ -255,9 +264,10 @@ Les mots de passe d'OpenVMS ne peuvent contenir que des lettres, des chiffres, `
 
 ## Écran graphique et DECwindows
 
-Le modèle **VAXstation 3900** (section Machine) ajoute à la machine une carte graphique
-monochrome QVSS de 1024 × 864, un clavier LK201 et une souris. Un onglet **Écran** paraît
-alors à côté de Console et Telnet : OpenVMS y affiche DECwindows Motif.
+Le modèle **VAXstation 3900**, celui par défaut (section Machine), a une carte graphique
+monochrome QVSS de 1024 × 864, un clavier LK201 et une souris. Son onglet **Écran**, à
+côté de Console et Telnet, est celui où OpenVMS affiche DECwindows Motif. Les modèles
+MicroVAX 3900 et VAXserver 3900 n'ont pas d'écran graphique, donc pas de DECwindows.
 
 - La console (le ROM, l'amorçage, `OPA0`) reste dans l'onglet Console : seul DECwindows
   utilise l'écran graphique.

@@ -1,7 +1,11 @@
-# VAX 4000 emulator
+# VAXstation 3900 emulator
 
 A VAX emulator that runs in your web browser, written in Rust and compiled to
-WebAssembly. It installs and runs **OpenVMS VAX**, as on a VAX 4000 model 200.
+WebAssembly. It is a **VAXstation 3900**, DEC's CVAX graphics workstation: it installs
+and runs **OpenVMS VAX**, with its **DECwindows Motif** graphical desktop.
+
+New to the VAX? The [step-by-step guide](docs/GUIDE.md) takes you from an empty browser
+to a running OpenVMS system, no prior knowledge needed.
 
 **Try it: <https://ve2cuy.github.io/vax-emu/>** · [Version française](README_FR.md)
 
@@ -12,14 +16,19 @@ WebAssembly. It installs and runs **OpenVMS VAX**, as on a VAX 4000 model 200.
 - **Processor**: complete CVAX instruction set (integer, F/D/G floating point, strings,
   queues, memory management, exceptions and interrupts). It passes DEC's *Hardware Core
   Instruction* diagnostic (EHKAA).
-- **Machine**: KA655 (MicroVAX 3900 / VAXserver 3900) — memory up to 512 MB, console
-  serial line, timers, time-of-year clock, Qbus adapter.
+- **Machine**: KA655 processor board, presented as a **VAXstation 3900** (also offered:
+  VAXstation 3900/GPX in color, MicroVAX 3900, VAXserver 3900) — memory up to 512 MB,
+  console serial line, timers, time-of-year clock, Qbus adapter.
+- **Graphics**: monochrome QVSS or color QDSS card, LK201 keyboard and mouse:
+  **DECwindows Motif** runs.
 - **Disks**: MSCP controller with four drives (DUA0-DUA3): RA disks and an RRD40 CD-ROM.
   **OpenVMS VAX V7.1 installs from its CD**, boots and accepts logins.
 - **Network**: DELQA Ethernet controller (XQA0) on a private virtual network.
-  **CMU-OpenVMS/IP** (TCP/IP) installs and runs.
+  **CMU-OpenVMS/IP** and **DEC TCP/IP Services** (UCX) install and run; a local bridge
+  puts the VAX on your own network.
 - **Telnet**: a second terminal in the page opens telnet sessions into the VAX.
-- **Coming next**: the VAX 4000-200 identity (KA660).
+- **File manager**: browse and edit the files of an OpenVMS disk from the page.
+- **Coming next**: a faster interpreter and saved machine states.
 
 ## Getting started
 
@@ -241,9 +250,10 @@ OpenVMS passwords may only contain letters, digits, `$` and `_`.
 
 ## Graphics screen and DECwindows
 
-The **VAXstation 3900** model (Machine section) adds a 1024 × 864 monochrome QVSS
-graphics card, an LK201 keyboard and a mouse to the machine. A **Screen** tab then
-appears next to Console and Telnet: OpenVMS shows DECwindows Motif there.
+The **VAXstation 3900** model, the default (Machine section), has a 1024 × 864
+monochrome QVSS graphics card, an LK201 keyboard and a mouse. Its **Screen** tab, next to
+Console and Telnet, is where OpenVMS shows DECwindows Motif. The MicroVAX 3900 and
+VAXserver 3900 models have no graphics screen, hence no DECwindows.
 
 - The console (the ROM, booting, `OPA0`) stays in the Console tab: only DECwindows uses
   the graphics screen.
