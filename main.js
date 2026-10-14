@@ -4,11 +4,11 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=31975b71';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=31975b71';
-import { initAccounts, accountsPowerChanged, accountsTcp } from './accounts.js?v=31975b71';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=8f6e6388';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=8f6e6388';
+import { initAccounts, accountsPowerChanged, accountsTcp } from './accounts.js?v=8f6e6388';
 
-const VERSION = '0.11.2';
+const VERSION = '0.11.3';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -1669,15 +1669,18 @@ async function privateKeyFor(password) {
   return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Entrées privées de `kind` (liste vide si le dossier n'en a pas). */
+/**
+ * Entrées privées de `kind` (liste vide si le dossier n'en a pas). Un index absent n'est
+ * pas toujours un 404 lisible : un serveur peut rediriger (301) sans en-tête CORS, ce que
+ * le fureteur rapporte comme un refus. Toute erreur compte donc comme « aucun fichier ».
+ */
 async function privateIndex(key, kind) {
   const base = repoUrl(`private-${key}`);
   let list;
   try {
     list = await readIndex(`${base}/${kind}/index.json`);
-  } catch (e) {
-    if (e.status === 404) return [];
-    throw e;
+  } catch {
+    return [];
   }
   return list.map((e) => ({ ...e, base, private: true }));
 }
