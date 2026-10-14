@@ -270,6 +270,10 @@ alors à côté de Console et Telnet : OpenVMS y affiche DECwindows Motif.
 - Le verrouillage des majuscules agit sur les lettres sans être transmis au VAX, et les
   touches tenues sont relâchées quand la page perd le clavier (Alt+Tab, capture d'écran) :
   sinon DECwindows croirait Maj ou Alt enfoncée et ses fenêtres ne réagiraient plus aux clics.
+- **Coller** : Ctrl+V (Cmd+V sur Mac, ou Maj+Inser) dans l'écran, ou le bouton **Coller** à
+  côté des onglets, tape le texte du presse-papiers du PC au clavier du VAX, dans la
+  fenêtre qui a le focus (lettres accentuées sans leur accent). L'inverse, copier du VAX
+  vers le PC, n'est pas possible : passez par l'onglet Telnet ou la Console.
 - **Alt+F4** ferme une fenêtre de DECwindows, mais au clavier il ferme aussi le fureteur : la
   page ne peut pas l'empêcher. Utilisez le bouton **Alt+F4** à côté des onglets, ou le bouton
   **Plein écran** : là, Alt+F4, Alt+Tab et Échap vont au VAX (Chrome et Edge; tenir Échap

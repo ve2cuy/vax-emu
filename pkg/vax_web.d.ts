@@ -149,6 +149,10 @@ export class Emulator {
      */
     video_key(code: string, state: number): boolean;
     /**
+     * Événements du clavier graphique en attente d'envoi au VAX.
+     */
+    video_keys_pending(): number;
+    /**
      * Souris : position voulue du pointeur sur l'écran (0..1023, 0..863) et boutons
      * (bit 0 gauche, bit 1 milieu, bit 2 droit).
      */
@@ -257,6 +261,7 @@ export interface InitOutput {
     readonly emulator_use_bridge: (a: number) => void;
     readonly emulator_video_bell: (a: number) => number;
     readonly emulator_video_key: (a: number, b: number, c: number, d: number) => number;
+    readonly emulator_video_keys_pending: (a: number) => number;
     readonly emulator_video_mouse: (a: number, b: number, c: number, d: number) => void;
     readonly emulator_video_take: (a: number) => [number, number];
     readonly ods2_copy: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number];

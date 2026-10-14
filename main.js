@@ -4,10 +4,10 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=997e44b3';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=997e44b3';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=44372306';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=44372306';
 
-const VERSION = '0.8.0';
+const VERSION = '0.8.1';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -1025,6 +1025,7 @@ const tabScreen = document.getElementById('tab-screen');
 const screenBox = document.getElementById('vax-screen');
 const screenCtx = screenBox.getContext('2d');
 const screenClose = document.getElementById('screen-close');
+const screenPaste = document.getElementById('screen-paste');
 const screenFull = document.getElementById('screen-full');
 const telnetBox = document.getElementById('telnet-terminal');
 const telnetStatus = document.getElementById('telnet-status');
@@ -1128,6 +1129,7 @@ function showTab(which) {
   telnetBox.hidden = !telnet;
   screenBox.hidden = tab !== 'screen';
   screenClose.hidden = tab !== 'screen';
+  screenPaste.hidden = tab !== 'screen';
   screenFull.hidden = tab !== 'screen' || !screenBox.requestFullscreen;
   overlay.classList.toggle('behind', tab !== 'console');
   if (telnet && !telnetTerm) {
@@ -1228,8 +1230,54 @@ function screenRelease() {
   if (running) worker?.postMessage({ type: 'vbuttons', buttons: 0 });
 }
 
+// Touches du clavier américain du LK201 pour les caractères collés : [code, avec Maj].
+const PASTE_KEYS = (() => {
+  const m = new Map([[' ', ['Space', false]], ['\n', ['Enter', false]], ['\t', ['Tab', false]]]);
+  for (const c of 'abcdefghijklmnopqrstuvwxyz') {
+    m.set(c, [`Key${c.toUpperCase()}`, false]);
+    m.set(c.toUpperCase(), [`Key${c.toUpperCase()}`, true]);
+  }
+  for (const d of '0123456789') m.set(d, [`Digit${d}`, false]);
+  const pairs = [['-', '_', 'Minus'], ['=', '+', 'Equal'], [';', ':', 'Semicolon'], [',', '<', 'Comma'],
+    ['.', '>', 'Period'], ['/', '?', 'Slash'], ["'", '"', 'Quote'], ['[', '{', 'BracketLeft'],
+    [']', '}', 'BracketRight'], ['\\', '|', 'Backslash'], ['`', '~', 'Backquote'], ['1', '!', 'Digit1'],
+    ['2', '@', 'Digit2'], ['3', '#', 'Digit3'], ['4', '$', 'Digit4'], ['5', '%', 'Digit5'], ['6', '^', 'Digit6'],
+    ['7', '&', 'Digit7'], ['8', '*', 'Digit8'], ['9', '(', 'Digit9'], ['0', ')', 'Digit0']];
+  for (const [plain, shifted, code] of pairs) {
+    m.set(plain, [code, false]);
+    m.set(shifted, [code, true]);
+  }
+  return m;
+})();
+
+/** Tape un texte au clavier du VAX (lettres accentuées sans leur accent; le reste sauté). */
+function screenPasteText(text) {
+  if (!running || !text) return;
+  // Les modificateurs tenus (Ctrl de Ctrl+V) sont relâchés d'abord.
+  for (const code of [...screenDown]) vkey(code, 1);
+  const keys = [];
+  const clean = text.replace(/\r\n?/g, '\n').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  for (const c of clean) {
+    const k = PASTE_KEYS.get(c);
+    if (!k) continue;
+    const [code, shift] = k;
+    if (shift) keys.push(['ShiftLeft', 0]);
+    keys.push([code, 0], [code, 1]);
+    if (shift) keys.push(['ShiftLeft', 1]);
+  }
+  if (keys.length) worker?.postMessage({ type: 'vpaste', keys });
+}
+
 function screenKey(e) {
   if (!running) return;
+  // Coller (Ctrl+V, Cmd+V, Maj+Inser) : le fureteur livre le texte par l'événement paste.
+  if (e.type === 'keydown' && (((e.ctrlKey || e.metaKey) && e.code === 'KeyV') || (e.shiftKey && e.code === 'Insert'))) return;
+  // Relâchement d'une touche jamais transmise (la touche V du collage, une touche tenue
+  // avant le clic dans l'écran) : rien à dire au VAX.
+  if (e.type === 'keyup' && !screenDown.has(e.code)) {
+    e.preventDefault();
+    return;
+  }
   // Les raccourcis du fureteur (F5, Ctrl+W…) ne doivent pas agir pendant qu'on tape au VAX.
   e.preventDefault();
   // Verrouillage des majuscules : jamais transmis (l'état du VAX et celui de l'hôte se
@@ -1279,6 +1327,19 @@ screenBox.addEventListener('contextmenu', (e) => e.preventDefault());
 // peut pas l'empêcher. Trois parades : un bouton qui envoie Alt+F4 au VAX; le plein écran,
 // où le fureteur laisse la page prendre les touches du système (Alt+F4, Alt+Tab, Échap);
 // et une confirmation avant de quitter la page quand le VAX est en marche.
+screenBox.addEventListener('paste', (e) => {
+  e.preventDefault();
+  screenPasteText(e.clipboardData?.getData('text/plain') ?? '');
+});
+screenPaste.addEventListener('pointerdown', (e) => e.preventDefault());
+screenPaste.addEventListener('click', async () => {
+  try {
+    screenPasteText(await navigator.clipboard.readText());
+  } catch {
+    // Lecture du presse-papiers refusée : Ctrl+V dans l'écran reste possible.
+  }
+  screenBox.focus();
+});
 screenClose.addEventListener('pointerdown', (e) => e.preventDefault());
 screenClose.addEventListener('click', () => {
   if (!running) return;

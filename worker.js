@@ -6,7 +6,7 @@
 // turbo {on} (quand le VAX travaille — calcul, disques, console —, le temps simulé va aussi
 // vite que le fureteur le permet; quand il attend sans rien faire, retour au temps réel), speed {factor} (vitesse du processeur : ×1 = 10 MIPS; pas encore offerte dans la page :
 // le fureteur plafonne vers 16 MIPS et la boucle d'attente de VMS n'est pas reconnue),
-// vkey {code, state}, vmouse {x, y, buttons}, vbuttons {buttons} (clavier et souris de l'écran graphique; start
+// vkey {code, state}, vmouse {x, y, buttons}, vbuttons {buttons}, vpaste {keys} (clavier et souris de l'écran graphique; start
 // {qvss: true} installe la carte monochrome, {qdss: octets du ROM vcb02} la carte couleur; le fil envoie video {y, h, pixels} pour les lignes
 // changées et bell quand la cloche du clavier sonne),
 // tcpOpen {port, ch} (connexion TCP de la page vers le VAX sur le canal `ch` : 0, l'onglet
@@ -26,8 +26,8 @@
 // Disques : fichiers de l'OPFS (dossier « disks »), ouverts en accès synchrone et branchés
 // sur les lecteurs MSCP (disks : [{unit, drive, file}]).
 
-import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=997e44b3';
-import { fsRun, fsError } from './fs-ops.js?v=997e44b3';
+import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=44372306';
+import { fsRun, fsError } from './fs-ops.js?v=44372306';
 
 const version = new URL(import.meta.url).search; // ?v=… transmis par la page
 let ready = null;
@@ -54,6 +54,9 @@ const heldKeys = new Set();
 let heldButtons = 0;
 let inputUntil = 0;
 const INPUT_HOLD_MS = 700;
+// Texte collé dans l'écran graphique : touches [code, état] envoyées au rythme où le VAX
+// les lit (sa file en tient 64).
+let pasteKeys = [];
 
 function screenInput() {
   inputUntil = performance.now() + INPUT_HOLD_MS;
@@ -267,6 +270,14 @@ function tick() {
     sim = next;
   }
   if (emu) sendFrames();
+  if (emu && pasteKeys.length) {
+    let n = 0;
+    while (pasteKeys.length && emu.video_keys_pending() < 32 && n++ < 32) {
+      const [code, state] = pasteKeys.shift();
+      emu.video_key(code, state);
+    }
+    screenInput();
+  }
   if (tcps.size) pollTcp();
   if (video && performance.now() - videoTime >= VIDEO_MS) {
     videoTime = performance.now();
@@ -398,6 +409,10 @@ self.onmessage = async (e) => {
         heldButtons = msg.buttons;
         emu?.video_mouse(msg.x, msg.y, msg.buttons);
         mouseAt = [msg.x, msg.y];
+        break;
+      case 'vpaste':
+        pasteKeys.push(...msg.keys);
+        screenInput();
         break;
       case 'vbuttons':
         // Boutons seuls (relâchés quand la page perd la souris) : le pointeur ne bouge pas.

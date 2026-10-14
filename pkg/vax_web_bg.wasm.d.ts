@@ -39,6 +39,7 @@ export const emulator_type_bytes: (a: number, b: number, c: number) => void;
 export const emulator_use_bridge: (a: number) => void;
 export const emulator_video_bell: (a: number) => number;
 export const emulator_video_key: (a: number, b: number, c: number, d: number) => number;
+export const emulator_video_keys_pending: (a: number) => number;
 export const emulator_video_mouse: (a: number, b: number, c: number, d: number) => void;
 export const emulator_video_take: (a: number) => [number, number];
 export const ods2_copy: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number];

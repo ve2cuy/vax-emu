@@ -355,6 +355,14 @@ export class Emulator {
         return ret !== 0;
     }
     /**
+     * Événements du clavier graphique en attente d'envoi au VAX.
+     * @returns {number}
+     */
+    video_keys_pending() {
+        const ret = wasm.emulator_video_keys_pending(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
      * Souris : position voulue du pointeur sur l'écran (0..1023, 0..863) et boutons
      * (bit 0 gauche, bit 1 milieu, bit 2 droit).
      * @param {number} x
