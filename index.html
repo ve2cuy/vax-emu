@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=b68dc71e">
-  <link rel="stylesheet" href="style.css?v=b68dc71e">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=20221475">
+  <link rel="stylesheet" href="style.css?v=20221475">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -606,6 +606,19 @@
         <button id="acc-back" type="button" class="secondary" data-i18n="fs.back">Back to the list</button>
       </div>
     </div>
+    <div id="acc-login" class="acc-pane" hidden>
+      <h3 class="acc-editor-title"><span data-i18n="acc.login.title">Login command procedure</span> <code id="acc-login-name"></code></h3>
+      <p id="acc-login-info" class="hint"></p>
+      <div class="files-text-wrap">
+        <textarea id="acc-login-text" class="files-text" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"
+                  aria-label="Login command procedure" data-i18n-aria="acc.login.title"></textarea>
+      </div>
+      <div class="dialog-actions">
+        <button id="acc-login-save" type="button" data-i18n="fs.save">Save (new version)</button>
+        <span class="spacer"></span>
+        <button id="acc-login-back" type="button" class="secondary" data-i18n="acc.login.back">Back to the account</button>
+      </div>
+    </div>
     <div id="acc-ids" class="acc-pane" hidden>
       <div class="files-tools">
         <button id="acc-id-refresh" type="button" class="secondary with-icon"><svg class="icon"><use href="#i-refresh"/></svg><span data-i18n="fs.refresh">Refresh</span></button>
@@ -690,7 +703,7 @@
       </div>
     </form>
   </dialog>
-  <script src="vendor/xterm/xterm.js?v=b68dc71e"></script>
-  <script type="module" src="main.js?v=b68dc71e"></script>
+  <script src="vendor/xterm/xterm.js?v=20221475"></script>
+  <script type="module" src="main.js?v=20221475"></script>
 </body>
 </html>

@@ -8,14 +8,14 @@
 // REVOKE, SHOW, LIST /IDENTIFIER), proxys (ADD, MODIFY, REMOVE, SHOW, LIST, CREATE /PROXY) et
 // une ligne de commande libre pour le reste (CREATE /RIGHTS, MODIFY /SYSTEM_PASSWORD, HELP…).
 
-import { t } from './i18n.js?v=b68dc71e';
-import { VmsSession } from './vms-files.js?v=b68dc71e';
-import { askLogin } from './files.js?v=b68dc71e';
+import { t } from './i18n.js?v=20221475';
+import { VmsSession, readText, saveText } from './vms-files.js?v=20221475';
+import { askLogin } from './files.js?v=20221475';
 import {
   PRIVS, FLAGS, DAYS, MODES, QUOTAS, ID_ATTRS, fail, userName, idName, proxyName, password, uic, octal,
   idValue, isoDate, vmsDate, messages, parseBrief, parseUser, parseIdentifiers, parseRights, parseProxies,
-  modifyQualifiers, packCommands, freeCommand, quoted,
-} from './uaf.js?v=b68dc71e';
+  modifyQualifiers, packCommands, freeCommand, quoted, loginFile,
+} from './uaf.js?v=20221475';
 
 const ACC_CHANNEL = 2;   // canal TCP du fil de la machine réservé à cette session
 const PROTECTED = ['SYSTEM', 'DEFAULT'];
@@ -201,11 +201,14 @@ function buildForm(r, isNew, rights) {
       field('group', t('acc.f.group'), text(r.group, { inputmode: 'numeric', size: 7 }), t('acc.f.octal')),
       field('member', t('acc.f.member'), text(r.member, { inputmode: 'numeric', size: 7 }), t('acc.f.octal')),
       field('device', t('acc.f.device'), text(r.device)),
-      field('directory', t('acc.f.directory'), text(isNew ? '' : r.directory)),
+      field('directory', t('acc.f.directory'), text(isNew ? '' : r.directory), isNew ? t('acc.f.directory.hint') : null),
       field('cli', t('acc.f.cli'), text(r.cli)),
       field('tables', t('acc.f.tables'), text(r.tables)),
       field('lgicmd', t('acc.f.lgicmd'), text(r.lgicmd))),
-    isNew ? el('label', { class: 'check' }, (F.mkdir = check(true)), ' ', t('acc.f.mkdir')) : null);
+    isNew ? el('label', { class: 'check' }, (F.mkdir = check(true)), ' ', t('acc.f.mkdir'))
+      : el('div', { class: 'acc-inline acc-login-open' },
+        el('button', { type: 'button', class: 'secondary small-button', text: t('acc.login.open'), onclick: openLogin }),
+        el('small', { class: 'hint', text: t('acc.login.open.hint') })));
   const pwd = section(t('acc.sec.password'),
     el('div', { class: 'acc-grid' },
       field('password', isNew ? t('acc.f.password') : t('acc.f.newPassword'), el('input', { type: 'password', autocomplete: 'new-password' }), t('acc.f.password.hint')),
@@ -277,6 +280,11 @@ function buildForm(r, isNew, rights) {
   $('acc-editor-title').textContent = title;
   $('acc-form').replaceChildren(ident, pwd, flags, days, quotas, privs, held ?? '');
   $('acc-form').scrollTop = 0;
+  if (isNew) {
+    // Répertoire vide : [NOM] du compte, montré en grisé pendant qu'on tape le nom.
+    const hint = () => { F.directory.placeholder = F.user.value.trim() ? `[${F.user.value.trim().toUpperCase()}]` : ''; };
+    F.user.addEventListener('input', hint);
+  }
   (isNew ? F.user : F.owner).focus();
 }
 
@@ -346,6 +354,49 @@ async function saveUser() {
     await loadUsers();
     await editUser();
     status(`${t(ed.isNew ? 'acc.added' : 'acc.saved', { user: name })}${notes.length ? ` — ${notes.join(' ')}` : ''}`);
+  });
+}
+
+// ------------------------------------------------------------------ procédure de connexion
+
+let loginTarget = null;  // {dir, name, uic, spec} : le fichier ouvert dans l'éditeur
+
+/** Ouvre la procédure de connexion du compte de la fiche (LGICMD, LOGIN.COM par défaut). */
+async function openLogin() {
+  const ed = state.editing;
+  if (!ed || ed.isNew) return;
+  const r = ed.before;
+  const target = loginFile(r.lgicmd, r.device, r.directory);
+  if (!target) return status(t('acc.login.noFile', { lgicmd: r.lgicmd }), true);
+  await guard(async () => {
+    status(t('acc.loading'));
+    const spec = `${target.dir}${target.name}`;
+    const found = await state.session.run([`WRITE SYS$OUTPUT F$SEARCH("${spec}")`]);
+    const existing = found.lines.find((l) => l.includes(';')) ?? '';
+    const text = existing ? await readText(state.session, existing) : t('acc.login.template', { user: r.user });
+    loginTarget = { ...target, uic: `[${r.group},${r.member}]`, spec: existing };
+    $('acc-login-name').textContent = existing || spec;
+    $('acc-login-info').textContent = existing ? t('acc.login.info', { user: r.user }) : t('acc.login.new', { user: r.user });
+    $('acc-login-text').value = text;
+    showPane('login');
+    $('acc-login-text').focus();
+    status('');
+  });
+}
+
+async function saveLogin() {
+  const target = loginTarget;
+  if (!target) return;
+  await guard(async () => {
+    status(t('acc.saving'));
+    const version = await saveText(state.session, target.dir, target.name, $('acc-login-text').value);
+    const spec = `${target.dir}${target.name};${version}`;
+    // Écrit par la session (SYSTEM en général) : le fichier est remis au compte.
+    await state.session.must([`SET FILE/OWNER_UIC=${target.uic} ${spec}`]);
+    target.spec = spec;
+    $('acc-login-name').textContent = spec;
+    $('acc-login-info').textContent = t('acc.login.info', { user: state.editing?.before.user ?? '' });
+    status(t('acc.login.saved', { spec }));
   });
 }
 
@@ -689,7 +740,7 @@ function ask(title, fields) {
 
 // ------------------------------------------------------------------ affichage
 
-const PANES = { users: 'acc-users', editor: 'acc-editor', ids: 'acc-ids', proxies: 'acc-proxies', cmd: 'acc-cmdpane' };
+const PANES = { users: 'acc-users', editor: 'acc-editor', login: 'acc-login', ids: 'acc-ids', proxies: 'acc-proxies', cmd: 'acc-cmdpane' };
 
 function showPane(name) {
   for (const [p, id] of Object.entries(PANES)) $(id).hidden = p !== name;
@@ -708,6 +759,7 @@ function updateTools() {
   for (const id of ['acc-refresh', 'acc-new', 'acc-list', 'acc-id-refresh', 'acc-id-add', 'acc-id-list', 'acc-proxy-refresh',
     'acc-proxy-add', 'acc-proxy-list', 'acc-run', 'acc-help', 'acc-proxy-create']) $(id).disabled = !on;
   for (const id of ['acc-edit', 'acc-copy']) $(id).disabled = !on || !u;
+  $('acc-login-save').disabled = !on;
   for (const id of ['acc-rename', 'acc-remove']) $(id).disabled = !on || !u || PROTECTED.includes(u);
   const id = selectedId();
   for (const b of ['acc-id-modify', 'acc-id-rename', 'acc-id-remove', 'acc-id-grant']) $(b).disabled = !on || !id;
@@ -861,6 +913,11 @@ export function initAccounts(context) {
   $('acc-remove').addEventListener('click', removeUser);
   $('acc-list').addEventListener('click', listUsers);
   $('acc-save').addEventListener('click', saveUser);
+  $('acc-login-save').addEventListener('click', saveLogin);
+  $('acc-login-back').addEventListener('click', () => {
+    showPane('editor');
+    status('');
+  });
   $('acc-back').addEventListener('click', () => {
     state.editing = null;
     showPane('users');
@@ -915,4 +972,4 @@ export function initAccounts(context) {
 }
 
 // Pour les essais (tools/chrome/accounts_check.py) : les analyseurs et constructeurs.
-export const testing = { buildForm, parseBrief, parseUser, parseIdentifiers, parseRights, parseProxies, modifyQualifiers, packCommands, quoted, octal };
+export const testing = { buildForm, loginFile, parseBrief, parseUser, parseIdentifiers, parseRights, parseProxies, modifyQualifiers, packCommands, quoted, octal };

@@ -299,7 +299,7 @@ async function stat(s, spec) {
   };
 }
 
-async function readText(s, spec) {
+export async function readText(s, spec) {
   const r = await s.must([`TYPE ${safeSpec(spec)}`]);
   return r.lines.length ? `${r.lines.join('\n')}\n` : '';
 }
@@ -315,7 +315,7 @@ function textLines(text) {
   return lines;
 }
 
-async function saveText(s, dirSpec, name, text) {
+export async function saveText(s, dirSpec, name, text) {
   const lines = textLines(text);
   if (text.length > TEXT_MAX) throw fail('fs.vmsBig');
   const target = `${safeSpec(dirSpec)}${safeName(name)}`;

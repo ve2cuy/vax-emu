@@ -1313,3 +1313,5 @@ a.icon-button { display: inline-flex; align-items: center; justify-content: cent
 .acc-example { padding: 2px 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text); font: 0.76rem ui-monospace, Consolas, monospace; cursor: pointer; }
 .acc-output { flex: 1; min-height: 8rem; margin: 0; padding: 8px 10px; overflow: auto; border-radius: 8px; background: #000; color: #d8d8d8; font: 0.8rem/1.3 ui-monospace, Consolas, monospace; white-space: pre; }
 .acc-privs th .acc-all { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.acc-login-open { margin-top: 10px; }
+#acc-login .files-text-wrap { min-height: 14rem; }

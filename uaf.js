@@ -455,6 +455,21 @@ export function packCommands(prefix, qualifiers) {
   return out;
 }
 
+/**
+ * Procédure de connexion d'un compte : LGICMD (vide ou « LOGIN » : LOGIN.COM) relatif au
+ * répertoire du compte; SYS$LOGIN: désigne ce répertoire. Rend {dir, name} (« DEV:[DIR] »,
+ * « NOM.TYP »), ou null si LGICMD ne désigne pas un fichier simple.
+ */
+export function loginFile(lgicmd, dev, dir) {
+  const v = String(lgicmd || 'LOGIN').trim().toUpperCase().replace(/^SYS\$LOGIN:/, '');
+  const m = /^([A-Z0-9$_]+:)?(\[[A-Z0-9$_.-]+\])?([A-Z0-9$_-]{1,39})(\.[A-Z0-9$_-]{0,39})?(;\d*)?$/.exec(v);
+  if (!m) return null;
+  const device = m[1] ?? dev;
+  const directory = m[2] ?? (m[1] ? null : dir);
+  if (!device || !directory) return null;
+  return { dir: `${device}${directory}`, name: `${m[3]}${m[4] && m[4] !== '.' ? m[4] : '.COM'}` };
+}
+
 /** Commande libre d'AUTHORIZE : verbe connu, rien d'interactif ni de DCL. */
 export function freeCommand(s) {
   const v = String(s ?? '').trim().replace(/^UAF>\s*/i, '');
