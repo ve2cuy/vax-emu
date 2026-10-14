@@ -26,8 +26,8 @@
 // Disques : fichiers de l'OPFS (dossier « disks »), ouverts en accès synchrone et branchés
 // sur les lecteurs MSCP (disks : [{unit, drive, file}]).
 
-import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=f311b26e';
-import { fsRun, fsError } from './fs-ops.js?v=f311b26e';
+import init, { Emulator, Ods2 } from './pkg/vax_web.js?v=c9ccdec5';
+import { fsRun, fsError } from './fs-ops.js?v=c9ccdec5';
 
 const version = new URL(import.meta.url).search; // ?v=… transmis par la page
 let ready = null;
@@ -62,6 +62,9 @@ function screenInput() {
     burst = false;
   }
 }
+let romSince = 0;        // heure (réelle) depuis laquelle le ROM de la console a la main
+let blanked = false;     // écran graphique éteint (système arrêté)
+const BLANK_MS = 1500;
 const VIDEO_MS = 33;     // au plus 30 images par seconde vers la page
 const tcps = new Map();  // canal -> {id, state} : connexions TCP de la page vers le VAX
 let burst = false;       // Turbo : en rafale (temps simulé détaché du temps réel)
@@ -274,6 +277,14 @@ function tick() {
       post({ type: 'video', y: head.getUint16(0, true), h: head.getUint16(2, true), pixels }, [pixels.buffer]);
     }
     if (emu.video_bell()) post({ type: 'bell' });
+    // Système arrêté (le ROM de la console a la main depuis un moment) : écran éteint.
+    if (!emu.in_console()) romSince = 0;
+    else romSince ||= videoTime;
+    const blank = romSince !== 0 && videoTime - romSince >= BLANK_MS;
+    if (blank !== blanked) {
+      blanked = blank;
+      post({ type: 'vblank', on: blank });
+    }
   }
   const out = emu.take_output();
   if (out.length) post({ type: 'output', bytes: out }, [out.buffer]);

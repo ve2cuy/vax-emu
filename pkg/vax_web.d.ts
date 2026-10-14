@@ -30,6 +30,10 @@ export class Emulator {
      */
     flush_disks(): void;
     /**
+     * Le processeur exécute le ROM de la console (autotest, ou système arrêté).
+     */
+    in_console(): boolean;
+    /**
      * Contenu de la NVR (1 Ko) sauvegardé par la page.
      */
     load_nvr(data: Uint8Array): void;
@@ -224,6 +228,7 @@ export interface InitOutput {
     readonly emulator_drive_blocks: (a: number, b: number) => number;
     readonly emulator_drive_types: () => [number, number];
     readonly emulator_flush_disks: (a: number) => void;
+    readonly emulator_in_console: (a: number) => number;
     readonly emulator_load_nvr: (a: number, b: number, c: number) => void;
     readonly emulator_load_qdss_rom: (a: number, b: number, c: number) => void;
     readonly emulator_load_rom: (a: number, b: number, c: number, d: number) => void;

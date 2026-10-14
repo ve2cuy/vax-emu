@@ -83,6 +83,14 @@ export class Emulator {
         wasm.emulator_flush_disks(this.__wbg_ptr);
     }
     /**
+     * Le processeur exécute le ROM de la console (autotest, ou système arrêté).
+     * @returns {boolean}
+     */
+    in_console() {
+        const ret = wasm.emulator_in_console(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Contenu de la NVR (1 Ko) sauvegardé par la page.
      * @param {Uint8Array} data
      */

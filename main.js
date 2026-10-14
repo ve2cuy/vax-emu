@@ -4,10 +4,10 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=f311b26e';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=f311b26e';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=c9ccdec5';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=c9ccdec5';
 
-const VERSION = '0.7.6';
+const VERSION = '0.7.7';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -566,6 +566,9 @@ function onWorkerMessage(e) {
       break;
     case 'video':
       screenCtx.putImageData(new ImageData(new Uint8ClampedArray(msg.pixels.buffer), 1024, msg.h), 0, msg.y);
+      break;
+    case 'vblank':
+      screenBox.classList.toggle('blank', msg.on);
       break;
     case 'bell':
       break;
@@ -1204,6 +1207,7 @@ async function qdssRom() {
 function clearScreen() {
   screenCtx.fillStyle = '#000';
   screenCtx.fillRect(0, 0, 1024, 864);
+  screenBox.classList.remove('blank');
   screenDown.clear();
 }
 

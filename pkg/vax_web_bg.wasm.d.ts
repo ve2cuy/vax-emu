@@ -10,6 +10,7 @@ export const emulator_disk_written: (a: number, b: number) => number;
 export const emulator_drive_blocks: (a: number, b: number) => number;
 export const emulator_drive_types: () => [number, number];
 export const emulator_flush_disks: (a: number) => void;
+export const emulator_in_console: (a: number) => number;
 export const emulator_load_nvr: (a: number, b: number, c: number) => void;
 export const emulator_load_qdss_rom: (a: number, b: number, c: number) => void;
 export const emulator_load_rom: (a: number, b: number, c: number, d: number) => void;
