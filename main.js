@@ -4,8 +4,8 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=8bddf132';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=8bddf132';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=9a347275';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=9a347275';
 
 const VERSION = '0.8.1';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
