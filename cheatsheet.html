@@ -211,6 +211,33 @@ SYSTEM SHUTDOWN COMPLETE      ! alors seulement : bouton Arrêt (&gt;&gt;&gt;) o
   </table>
   <p>Après un changement de <code>MODPARAMS.DAT</code> : <code>@SYS$UPDATE:AUTOGEN GETDATA REBOOT NOFEEDBACK</code>.</p>
 
+  <h2>Fichiers importants</h2>
+  <p>Les procédures <code>.COM</code> se modifient avec <code>EDIT</code> (ou le gestionnaire de fichiers de l'émulateur); gardez l'ancienne version (<code>;-1</code>) tant que la nouvelle n'est pas éprouvée.</p>
+  <table>
+    <tr><th>Fichier</th><th>Rôle</th></tr>
+    <tr><td><code>SYS$MANAGER:SYLOGIN.COM</code></td><td>Procédure de login générale : exécutée pour <em>tous</em> les usagers, avant leur <code>LOGIN.COM</code> (nom logique <code>SYS$SYLOGIN</code>)</td></tr>
+    <tr><td><code>SYS$LOGIN:LOGIN.COM</code></td><td>Procédure de login personnelle : symboles, noms logiques, invite (<code>SET PROMPT</code>) de l'usager</td></tr>
+    <tr><td><code>SYS$MANAGER:SYSTARTUP_VMS.COM</code></td><td>Démarrage propre au site : lancé à la fin de l'amorçage (files d'attente, réseau, produits, <code>SYS$ANNOUNCE</code>)</td></tr>
+    <tr><td><code>SYS$MANAGER:SYCONFIG.COM</code></td><td>Configuration des périphériques avant leur détection automatique</td></tr>
+    <tr><td><code>SYS$MANAGER:SYLOGICALS.COM</code></td><td>Noms logiques du système définis à l'amorçage</td></tr>
+    <tr><td><code>SYS$MANAGER:SYPAGSWPFILES.COM</code></td><td>Fichiers de pagination et d'échange supplémentaires</td></tr>
+    <tr><td><code>SYS$MANAGER:SYSECURITY.COM</code></td><td>Démarrage du serveur d'audit de sécurité</td></tr>
+    <tr><td><code>SYS$MANAGER:SYSHUTDWN.COM</code></td><td>Commandes du site exécutées par <code>SHUTDOWN.COM</code> à l'arrêt</td></tr>
+    <tr><td><code>SYS$MANAGER:WELCOME.TXT</code></td><td>Message affiché après le login (nom logique <code>SYS$WELCOME</code>); <code>SYS$ANNOUNCE</code> : message avant le login</td></tr>
+    <tr><td><code>SYS$MANAGER:OPERATOR.LOG</code></td><td>Journal de l'opérateur (messages OPCOM)</td></tr>
+    <tr><td><code>SYS$MANAGER:ACCOUNTNG.DAT</code></td><td>Comptabilité des sessions (<code>ACCOUNTING</code>)</td></tr>
+    <tr><td><code>SYS$SYSTEM:SYSUAF.DAT</code></td><td>Comptes d'usagers (<code>MCR AUTHORIZE</code>)</td></tr>
+    <tr><td><code>SYS$SYSTEM:RIGHTSLIST.DAT</code></td><td>Identificateurs et droits (<code>AUTHORIZE</code> : <code>SHOW/IDENTIFIER</code>)</td></tr>
+    <tr><td><code>SYS$SYSTEM:MODPARAMS.DAT</code></td><td>Paramètres du système donnés à AUTOGEN</td></tr>
+    <tr><td><code>SYS$SYSTEM:VAXVMSSYS.PAR</code></td><td>Paramètres en vigueur à l'amorçage (<code>MCR SYSGEN</code>)</td></tr>
+    <tr><td><code>SYS$SYSTEM:PAGEFILE.SYS, SWAPFILE.SYS</code></td><td>Fichiers de pagination et d'échange; <code>SYSDUMP.DMP</code> : vidage après un arrêt fatal</td></tr>
+    <tr><td><code>SYS$SYSTEM:STARTUP.COM, SHUTDOWN.COM</code></td><td>Démarrage et arrêt de VMS (à ne pas modifier : utiliser les procédures <code>SY*.COM</code>)</td></tr>
+    <tr><td><code>SYS$COMMON:[SYSEXE]LMF$LICENSE.LDB</code></td><td>Licences enregistrées (<code>LICENSE LIST</code>, <code>SHOW LICENSE</code>)</td></tr>
+    <tr><td><code>SYS$MANAGER:DECW$PRIVATE_SERVER_SETUP.COM</code></td><td>Réglages du serveur DECwindows propres au site (à créer à partir du <code>.TEMPLATE</code>)</td></tr>
+    <tr><td><code>SYS$MANAGER:DECW$SYLOGIN.COM</code></td><td>Procédure de login des sessions DECwindows</td></tr>
+  </table>
+  <p>Ordre à l'amorçage : <code>STARTUP.COM</code> → <code>SYCONFIG</code> → <code>SYLOGICALS</code> → <code>SYPAGSWPFILES</code> → <code>SYSECURITY</code> → <code>SYSTARTUP_VMS</code>. Au login : <code>SYLOGIN.COM</code>, puis <code>LOGIN.COM</code>.</p>
+
   <h2>TCP/IP (CMU-OpenVMS/IP)</h2>
   <div class="grid">
     <table>
@@ -424,6 +451,33 @@ SYSTEM SHUTDOWN COMPLETE      ! only then: Halt button (&gt;&gt;&gt;) or Power o
     <tr><td><code>SYS$EXAMPLES</code></td><td>Example programs</td></tr>
   </table>
   <p>After changing <code>MODPARAMS.DAT</code>: <code>@SYS$UPDATE:AUTOGEN GETDATA REBOOT NOFEEDBACK</code>.</p>
+
+  <h2>Important files</h2>
+  <p>Edit <code>.COM</code> procedures with <code>EDIT</code> (or the emulator's file manager); keep the previous version (<code>;-1</code>) until the new one is proven.</p>
+  <table>
+    <tr><th>File</th><th>Purpose</th></tr>
+    <tr><td><code>SYS$MANAGER:SYLOGIN.COM</code></td><td>System-wide login procedure: run for <em>every</em> user, before their <code>LOGIN.COM</code> (logical name <code>SYS$SYLOGIN</code>)</td></tr>
+    <tr><td><code>SYS$LOGIN:LOGIN.COM</code></td><td>Personal login procedure: the user's symbols, logical names, prompt (<code>SET PROMPT</code>)</td></tr>
+    <tr><td><code>SYS$MANAGER:SYSTARTUP_VMS.COM</code></td><td>Site-specific startup: run at the end of booting (queues, network, products, <code>SYS$ANNOUNCE</code>)</td></tr>
+    <tr><td><code>SYS$MANAGER:SYCONFIG.COM</code></td><td>Device configuration before autoconfiguration</td></tr>
+    <tr><td><code>SYS$MANAGER:SYLOGICALS.COM</code></td><td>System logical names defined at boot</td></tr>
+    <tr><td><code>SYS$MANAGER:SYPAGSWPFILES.COM</code></td><td>Additional page and swap files</td></tr>
+    <tr><td><code>SYS$MANAGER:SYSECURITY.COM</code></td><td>Startup of the security audit server</td></tr>
+    <tr><td><code>SYS$MANAGER:SYSHUTDWN.COM</code></td><td>Site commands run by <code>SHUTDOWN.COM</code> at shutdown</td></tr>
+    <tr><td><code>SYS$MANAGER:WELCOME.TXT</code></td><td>Message shown after login (logical name <code>SYS$WELCOME</code>); <code>SYS$ANNOUNCE</code>: message before login</td></tr>
+    <tr><td><code>SYS$MANAGER:OPERATOR.LOG</code></td><td>Operator log (OPCOM messages)</td></tr>
+    <tr><td><code>SYS$MANAGER:ACCOUNTNG.DAT</code></td><td>Session accounting (<code>ACCOUNTING</code>)</td></tr>
+    <tr><td><code>SYS$SYSTEM:SYSUAF.DAT</code></td><td>User accounts (<code>MCR AUTHORIZE</code>)</td></tr>
+    <tr><td><code>SYS$SYSTEM:RIGHTSLIST.DAT</code></td><td>Identifiers and rights (<code>AUTHORIZE</code>: <code>SHOW/IDENTIFIER</code>)</td></tr>
+    <tr><td><code>SYS$SYSTEM:MODPARAMS.DAT</code></td><td>System parameters given to AUTOGEN</td></tr>
+    <tr><td><code>SYS$SYSTEM:VAXVMSSYS.PAR</code></td><td>Parameters in effect at boot (<code>MCR SYSGEN</code>)</td></tr>
+    <tr><td><code>SYS$SYSTEM:PAGEFILE.SYS, SWAPFILE.SYS</code></td><td>Page and swap files; <code>SYSDUMP.DMP</code>: dump after a crash</td></tr>
+    <tr><td><code>SYS$SYSTEM:STARTUP.COM, SHUTDOWN.COM</code></td><td>VMS startup and shutdown (do not edit: use the <code>SY*.COM</code> procedures)</td></tr>
+    <tr><td><code>SYS$COMMON:[SYSEXE]LMF$LICENSE.LDB</code></td><td>Registered licenses (<code>LICENSE LIST</code>, <code>SHOW LICENSE</code>)</td></tr>
+    <tr><td><code>SYS$MANAGER:DECW$PRIVATE_SERVER_SETUP.COM</code></td><td>Site-specific DECwindows server settings (create it from the <code>.TEMPLATE</code>)</td></tr>
+    <tr><td><code>SYS$MANAGER:DECW$SYLOGIN.COM</code></td><td>Login procedure of DECwindows sessions</td></tr>
+  </table>
+  <p>Boot order: <code>STARTUP.COM</code> → <code>SYCONFIG</code> → <code>SYLOGICALS</code> → <code>SYPAGSWPFILES</code> → <code>SYSECURITY</code> → <code>SYSTARTUP_VMS</code>. At login: <code>SYLOGIN.COM</code>, then <code>LOGIN.COM</code>.</p>
 
   <h2>TCP/IP (CMU-OpenVMS/IP)</h2>
   <div class="grid">

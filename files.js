@@ -5,8 +5,8 @@
 // réécrirait par-dessus nos modifications). VAX en marche, on peut aussi passer par OpenVMS
 // lui-même : une session telnet cachée exécute les opérations (vms-files.js).
 
-import { t } from './i18n.js?v=fe4f2f1e';
-import { VmsSession, vmsRun, childDir } from './vms-files.js?v=fe4f2f1e';
+import { t } from './i18n.js?v=a8e07f57';
+import { VmsSession, vmsRun, childDir } from './vms-files.js?v=a8e07f57';
 
 let ctx = null;          // { disks(), running(), worker(), version }
 let fsWorker = null;
