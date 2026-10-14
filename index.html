@@ -25,8 +25,8 @@
       if ([...blocks].some((p) => p.lang === lang)) blocks.forEach((p) => { p.hidden = p.lang !== lang; });
     }, 12000);
   </script>
-  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=701083f3">
-  <link rel="stylesheet" href="style.css?v=701083f3">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css?v=fe4f2f1e">
+  <link rel="stylesheet" href="style.css?v=fe4f2f1e">
 </head>
 <body>
   <!-- Icônes (traits de 24 × 24, couleur du texte) -->
@@ -106,10 +106,10 @@
               <input id="rom-file" type="file" accept=".bin,.rom,application/octet-stream" hidden>
             </label>
             <label class="field"><span data-i18n="mem.label">Memory</span>
-              <select id="mem-list"></select>
+              <select id="mem-list" autocomplete="off"></select>
             </label>
             <label class="field"><span data-i18n="model.label">Model</span>
-              <select id="model-list">
+              <select id="model-list" autocomplete="off">
                 <option value="microvax" data-i18n="model.microvax">MicroVAX 3900</option>
                 <option value="server" data-i18n="model.server">VAXserver 3900</option>
                 <option value="station" data-i18n="model.station">VAXstation 3900 (graphics screen)</option>
@@ -540,7 +540,7 @@
       </div>
     </form>
   </dialog>
-  <script src="vendor/xterm/xterm.js?v=701083f3"></script>
-  <script type="module" src="main.js?v=701083f3"></script>
+  <script src="vendor/xterm/xterm.js?v=fe4f2f1e"></script>
+  <script type="module" src="main.js?v=fe4f2f1e"></script>
 </body>
 </html>

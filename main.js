@@ -4,10 +4,10 @@
 // Le ROM de la console et la NVR sont gardés dans IndexedDB; les préférences dans
 // localStorage. Rien n'est envoyé sur le réseau.
 
-import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=701083f3';
-import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=701083f3';
+import { LANGUAGES, browserLanguage, getLanguage, setLanguage, t } from './i18n.js?v=fe4f2f1e';
+import { initFiles, openFiles, filesReply, filesPowerChanged, filesTcp } from './files.js?v=fe4f2f1e';
 
-const VERSION = '0.7.3';
+const VERSION = '0.7.4';
 const V = new URL(import.meta.url).search; // ?v=… : même version pour les modules chargés
 const ROM_SIZE = 128 * 1024;
 
@@ -440,6 +440,14 @@ function modelName() {
 
 async function powerOn() {
   if (!rom || diskBusy) return;
+  // Les listes font foi : un fureteur qui restaure la page (session rouverte, retour arrière)
+  // y remet l'ancien choix sans prévenir, et le modèle affiché ne serait pas celui démarré.
+  if (prefs.model !== modelList.value || prefs.mem !== Number(memList.value)) {
+    prefs.model = modelList.value;
+    prefs.mem = Number(memList.value);
+    savePrefs();
+    showScreenTab();
+  }
   await powerOff();
   term.reset();
   showStatus('status.starting');
