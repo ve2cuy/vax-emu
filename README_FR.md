@@ -1,0 +1,420 @@
+# Émulateur VAXstation 3900
+
+Un émulateur VAX qui s'exécute dans votre fureteur, écrit en Rust et compilé en
+WebAssembly. C'est une **VAXstation 3900**, le poste de travail graphique CVAX de DEC : il
+installe et fait tourner **OpenVMS VAX**, avec son bureau graphique **DECwindows Motif**.
+
+Vous découvrez le VAX? Le [guide pas à pas](docs/GUIDE_FR.md) vous mène d'un fureteur
+vide à un système OpenVMS en marche, sans connaissance préalable.
+
+**L'essayer : <https://ve2cuy.github.io/vax-emu/>** · [English version](README.md)
+
+![OpenVMS VAX V7.1 dans le fureteur](docs/screenshots/vms.png)
+
+## État
+
+- **Processeur** : jeu d'instructions complet du CVAX (entiers, virgule flottante F/D/G,
+  chaînes, files, gestion de la mémoire, exceptions et interruptions). Il réussit le
+  diagnostic DEC *Hardware Core Instruction* (EHKAA).
+- **Machine** : carte processeur KA655, présentée comme une **VAXstation 3900** (aussi
+  offertes : VAXstation 3900/GPX en couleur, MicroVAX 3900, VAXserver 3900) — mémoire
+  jusqu'à 512 Mo, ligne série de la console, temporisateurs, horloge, adaptateur Qbus.
+- **Graphisme** : carte QVSS monochrome ou QDSS couleur, clavier LK201 et souris :
+  **DECwindows Motif** fonctionne.
+- **Disques** : contrôleur MSCP à quatre lecteurs (DUA0-DUA3) : disques RA et un CD-ROM
+  RRD40. **OpenVMS VAX V7.1 s'installe depuis son CD**, démarre et accepte les connexions.
+- **Réseau** : contrôleur Ethernet DELQA (XQA0) sur un réseau virtuel privé.
+  **CMU-OpenVMS/IP** et **DEC TCP/IP Services** (UCX) s'installent et fonctionnent; un
+  pont local met le VAX sur votre propre réseau.
+- **Telnet** : un deuxième terminal dans la page ouvre des sessions telnet vers le VAX.
+- **Gestionnaire de fichiers** : parcourir et modifier les fichiers d'un disque OpenVMS
+  depuis la page.
+- **Comptes OpenVMS** : toutes les opérations d'AUTHORIZE (comptes, identificateurs,
+  proxys) dans une fenêtre de la page.
+- **À venir** : un interpréteur plus rapide et la sauvegarde de l'état de la machine.
+
+## Pour commencer
+
+1. Ouvrez l'émulateur. Le ROM de la console du KA655
+   ([`ka655x.bin`](https://github.com/simh/simh/raw/master/VAX/ka655x.bin), du projet
+   [SIMH](https://github.com/simh/simh)) est téléchargé automatiquement la première fois;
+   vous pouvez aussi charger votre copie dans **Machine › Charger un fichier ROM…**. Il
+   reste dans votre fureteur et n'est jamais envoyé.
+2. Les autotests défilent de 40 à 03, puis l'invite de la console `>>>` apparaît. Cliquez
+   sur le terminal et tapez, par exemple, `SHOW DEVICE`, `SHOW MEMORY` ou `HELP`.
+
+Le bouton **Arrêt** (ou Ctrl+P, quand la console le permet) arrête le processeur et
+revient à l'invite `>>>`, comme la touche BREAK d'un vrai terminal de console.
+
+Le VAX va normalement au rythme du temps réel, comme la vraie machine, environ 10 MIPS. Le
+bouton **Turbo** le laisse aller aussi vite que le permet votre fureteur quand il
+travaille (calcul, disques, affichage) : OpenVMS démarre en 9 secondes environ plutôt
+qu'en 23. Quand le VAX attend, à une invite par exemple, il garde le temps réel : rien
+n'expire plus vite, et l'horloge d'OpenVMS ne prend qu'un peu d'avance pendant les rafales.
+
+## Dépôt et installations en un clic
+
+Le menu **Dépôt** liste les fichiers du dépôt de l'émulateur (<https://ve2cuy.com/vax>) :
+ROM de la console, disques prêts à démarrer (OpenVMS VAX V7.1 installé, avec ou sans
+TCP/IP) et CD (OpenVMS VAX V7.1, CMU-OpenVMS/IP, OpenVMS Freeware V2.0 et V3.0). Choisissez
+un fichier et un lecteur, puis **Mettre** : il est copié dans votre fureteur (les
+fichiers compressés sont décompressés en chemin).
+
+Le menu **Installation** automatise les longues étapes :
+
+- **Initialiser depuis le Web** met un RA82 vierge dans DUA0 et le CD d'OpenVMS VAX V7.1
+  dans DUA1, amorce le CD, restaure le système sur le disque et lance la procédure
+  d'installation; vous répondez ensuite à ses questions (options, mots de passe, nom du
+  nœud, fuseau horaire).
+- **Installer TCP/IP** installe CMU-OpenVMS/IP sur le système OpenVMS de DUA0 (vous donnez
+  le mot de passe de SYSTEM) : telnet et FTP, adresse 10.0.2.15, démarré avec le système.
+  Il installe aussi la commande `NETCONFIG`, qui change l'adresse, le masque, la
+  passerelle et les serveurs DNS de façon interactive (en français ou en anglais),
+  redémarre le réseau et le teste.
+
+## Réseau (menu)
+
+Le menu **Réseau** choisit comment le contrôleur Ethernet du VAX (XQA0) est branché :
+
+- **Virtuel** (par défaut) : un réseau privé où répond une passerelle, 10.0.2.2; donnez au
+  VAX l'adresse 10.0.2.15.
+- **Pont local** : le VAX paraît sur votre réseau local avec sa propre adresse (réglée dans
+  OpenVMS, ex. 192.168.2.77), grâce au petit relais *vax-bridge* qui tourne sur votre
+  ordinateur (Windows, Linux ou macOS). Les autres ordinateurs peuvent alors le « pinger »
+  et s'y connecter par telnet. Voir [Mise en place du pont réseau](#mise-en-place-du-pont-réseau)
+  plus bas.
+
+L'icône du livre, dans la barre du haut, ouvre un **aide-mémoire OpenVMS** : commandes DCL
+de base, répertoires importants, et comment changer l'adresse TCP/IP, la passerelle ou
+les serveurs de noms.
+
+Au-dessus de l'écran, l'onglet **Telnet** ouvre une session telnet vers le VAX dans un
+deuxième terminal, à côté de la console : plusieurs connexions à la fois, comme sur un vrai
+système. TCP/IP doit être en marche dans OpenVMS (bouton Installer TCP/IP, ou le disque
+OpenVMS + TCP/IP du dépôt).
+
+Sur un téléphone ou une tablette, une rangée de touches paraît sous l'écran : Ctrl
+(touchez-la, puis une lettre : Ctrl puis Z envoie Ctrl+Z), Esc, Tab, Ctrl+C, Ctrl+Y,
+Ctrl+Z, les flèches et PF1-PF4. La section Clavier la montre ou la cache sur tout
+appareil. Une image `.gz` téléchargée du dépôt s'importe telle quelle : la page la
+décompresse.
+
+## Mise en place du pont réseau
+
+Le relais *vax-bridge* tourne sur l'ordinateur où se trouve le fureteur. Il copie les
+trames Ethernet entre la page et une de vos cartes réseau : le VAX se retrouve sur votre
+réseau local avec sa propre adresse. Une carte filaire convient le mieux : les bornes Wi-Fi
+écartent les trames d'une deuxième adresse de station. En Wi-Fi seulement, voir
+[Wi-Fi seulement](#wi-fi-seulement) plus bas.
+
+### 1. Installer le relais
+
+Téléchargez le fichier de votre système dans la page
+[Releases](https://github.com/ve2cuy/vax-emu/releases).
+
+**Windows**
+
+1. Installez [Npcap](https://npcap.com) (options par défaut).
+2. Téléchargez `vax-bridge.exe`.
+3. Trouvez l'adresse de votre PC avec `ipconfig`, puis, dans un terminal :
+
+   ```
+   vax-bridge --iface 192.168.2.11
+   ```
+
+**Linux** (x86_64)
+
+1. Installez libpcap : `sudo apt install libpcap0.8` (Debian, Ubuntu), `sudo dnf install
+   libpcap` (Fedora).
+2. Extrayez le relais : `tar xzf vax-bridge-linux-x86_64.tar.gz`
+3. Lancez-le sur votre carte réseau (`ip addr` les énumère) :
+
+   ```
+   sudo ./vax-bridge --iface eth0
+   ```
+
+   Pour le lancer sans `sudo`, donnez-lui une fois le droit de capturer :
+   `sudo setcap cap_net_raw,cap_net_admin=eip vax-bridge`
+
+**macOS** (`macos-arm64` pour Apple Silicon, `macos-x86_64` pour Intel)
+
+1. Extrayez le relais : `tar xzf vax-bridge-macos-arm64.tar.gz`
+2. Le programme n'est pas signé. Si macOS refuse de le lancer :
+   `xattr -d com.apple.quarantine vax-bridge`
+3. Lancez-le sur votre carte réseau (`ifconfig` les énumère; libpcap vient avec macOS) :
+
+   ```
+   sudo ./vax-bridge --iface en0
+   ```
+
+   Essayé sur un MacBook Pro (Apple Silicon) en Wi-Fi, avec Chrome.
+
+Sur tous les systèmes, `--iface` reçoit le nom de la carte, l'adresse IPv4 de votre
+ordinateur sur cette carte, ou un morceau de la description de la carte;
+`vax-bridge --iface "?"` énumère les cartes. Laissez le relais en marche : il affiche
+`page branchée` quand la page s'y connecte.
+
+### Lancer le relais depuis la page (facultatif)
+
+Plutôt que de lancer le relais dans un terminal à chaque fois, enregistrez-le une fois :
+la section **Réseau** de la page, en **Pont local**, offre alors un bouton **Lancer le
+relais**. Au premier clic, le fureteur demande s'il peut ouvrir vax-bridge : acceptez (et
+cochez « toujours permettre »). Le relais part avec les options données à
+l'enregistrement; la page s'y branche d'elle-même en quelques secondes. S'il tourne déjà,
+le bouton ne lance pas de second relais.
+
+Placez d'abord le relais à son emplacement définitif : l'enregistrement retient son
+chemin. Puis, dans un terminal :
+
+**Windows**
+
+```
+vax-bridge --install --iface 192.168.2.11
+```
+
+Le relais s'ouvre dans une fenêtre de console; fermez-la pour l'arrêter.
+
+**Linux**
+
+```
+sudo setcap cap_net_raw,cap_net_admin=eip vax-bridge
+./vax-bridge --install --iface eth0
+```
+
+La première commande permet au relais de capturer sans `sudo` (le bouton ne peut pas
+donner de mot de passe). L'enregistrement crée
+`~/.local/share/applications/vax-bridge.desktop` (il faut `xdg-utils`); le relais s'ouvre
+dans un terminal.
+
+**macOS**
+
+```
+./vax-bridge --install --iface en0
+```
+
+L'enregistrement crée la petite application `~/Applications/VAX Bridge.app`. À chaque
+lancement, macOS demande le mot de passe d'administrateur (le relais lit les cartes par
+`/dev/bpf*`). Le relais tourne en arrière-plan; son journal est `/tmp/vax-bridge.log`.
+Pour l'arrêter : `sudo pkill vax-bridge`.
+
+Les options `--port`, `--telnet`, `--listen`, `--vax-ip`, `--origin` et `--wifi` sont
+retenues elles aussi. Pour
+changer de carte, refaites `--install` avec la nouvelle. Pour tout retirer :
+`vax-bridge --uninstall`.
+
+### 2. Brancher la page
+
+1. Dans la page, ouvrez la section **Réseau** et choisissez **Pont local**. L'adresse du
+   relais reste `ws://127.0.0.1:8023`.
+2. Si le fureteur demande de permettre à ce site d'accéder aux applications de cet
+   appareil (accès au réseau local), acceptez.
+3. Allumez le VAX (le mode réseau s'applique à la mise sous tension). La section affiche
+   « Branché au réseau local ».
+
+Utilisez Chrome, Edge ou Firefox. Safari refuse la connexion de la page https au relais
+(`ws://127.0.0.1`, non chiffré) : la page reste alors débranchée et le relais n'affiche
+rien.
+
+### 3. Donner au VAX une adresse de votre réseau
+
+Dans OpenVMS, TCP/IP installé (bouton Installer TCP/IP), ouvrez une session SYSTEM et
+tapez `NETCONFIG` : la commande demande l'adresse (libre sur votre réseau, ex.
+192.168.2.77), le masque, la passerelle et les serveurs DNS, relance TCP/IP et « pingue »
+la passerelle. Elle marche avec CMU-OpenVMS/IP et avec DEC TCP/IP Services (UCX), celle
+des deux qui est installée.
+
+### 4. Joindre le VAX
+
+- Des **autres ordinateurs** du réseau : `ping 192.168.2.77`, `telnet 192.168.2.77`.
+- De l'**ordinateur qui fait tourner le relais** : `telnet localhost 2323`. Une carte ne
+  reçoit pas les trames qu'elle émet elle-même : cet ordinateur ne peut donc pas
+  « pinger » le VAX à son adresse; le relais ouvre ce port local à la place. Le relais
+  joint le VAX depuis l'adresse 10.0.3.2 : le VAX répond par sa passerelle par défaut,
+  qui doit donc être réglée.
+- Dans la page : l'onglet **Telnet**.
+
+### Wi-Fi seulement
+
+En Wi-Fi, la borne ne livre que les trames pour l'adresse de station de l'ordinateur : le
+VAX ne reçoit pas les réponses qui lui sont adressées (pas même la réponse ARP du routeur)
+et n'échange qu'un peu, mal, avec l'ordinateur du relais. Sans carte filaire, lancez le
+relais avec `--wifi`, et avec `--listen 0.0.0.0` pour que les autres ordinateurs
+joignent le VAX :
+
+```
+sudo ./vax-bridge --iface en0 --wifi --vax-ip 192.168.2.77 --listen 0.0.0.0
+```
+
+- `--wifi` : le relais répond lui-même aux demandes ARP du VAX (sauf pour les adresses de
+  l'ordinateur) : le VAX joint ainsi le relais par sa passerelle.
+- `--vax-ip` : un relais qui vient de démarrer ne connaît l'adresse du VAX qu'après avoir
+  vu une de ses trames; donnez-la ici.
+- `--listen 0.0.0.0` : le port telnet est ouvert au réseau. Des autres ordinateurs :
+  `telnet <adresse de l'ordinateur> 2323` (ex. `telnet 192.168.2.115 2323`); de
+  l'ordinateur lui-même, toujours `telnet localhost 2323`.
+
+Limites : on joint le VAX à l'adresse de l'ordinateur, pas à la sienne; seul le telnet
+suit; le VAX n'a pas accès à Internet. Le telnet n'est pas chiffré : ne l'ouvrez ainsi que
+sur un réseau de confiance.
+
+### Options du relais
+
+| Option | Défaut | Rôle |
+|---|---|---|
+| `--iface <carte>` | (obligatoire) | carte réseau : nom, adresse de l'hôte ou description; `?` les énumère |
+| `--port <n>` | 8023 | port du WebSocket de la page, sur 127.0.0.1 seulement |
+| `--telnet <n>` | 2323 | port local mené au telnet du VAX; 0 : aucun |
+| `--listen <a.b.c.d>` | 127.0.0.1 | adresse d'écoute de `--telnet`; 0.0.0.0 l'ouvre au réseau |
+| `--vax-ip <a.b.c.d>` | apprise | adresse du VAX pour `--telnet`, si elle n'est pas apprise de ses trames |
+| `--origin <url>` | | origine de page permise en plus de https://ve2cuy.github.io |
+| `--wifi` | | carte Wi-Fi : le relais répond à l'ARP du VAX (voir [Wi-Fi seulement](#wi-fi-seulement)) |
+
+## Disques et OpenVMS
+
+Le menu **Disques** gère les quatre lecteurs. Les images sont gardées dans le stockage
+privé du fureteur (OPFS) et ne quittent jamais votre ordinateur; ce que le VAX y écrit
+est conservé.
+
+- **Importer…** copie une image de disque (`.dsk`) ou de CD (`.iso`) de votre ordinateur.
+- **Vierge** crée un disque vide du type choisi (RA82, RA92...).
+- Un fureteur peut effacer ce stockage quand l'espace manque, sauf s'il lui a accordé le
+  statut « persistant » (le menu Disques l'indique) : **téléchargez vos disques** pour en
+  garder une copie.
+- Le bouton de téléchargement remet une image sur votre ordinateur; **Éjecter** la retire.
+
+Pour installer OpenVMS VAX (éteignez le VAX pour changer les disques) :
+
+1. **DUA0** : un RA82 ou un RA92 vierge. **DUA1** : l'image du CD d'OpenVMS VAX, par
+   exemple la V7.1 (`AG-QSBWB-BE`) de l'[archive de VaxHaven](https://www.vaxhaven.com/CD_Image_Archive).
+2. Allumez, puis à `>>>` tapez `B DUA1`. Donnez la date, répondez `YES`, puis restaurez
+   le système sur le disque :
+   `$ BACKUP DUA1:VMS071.B/SAVE_SET DUA0:`
+3. Appuyez sur **Arrêt**, puis `B DUA0` : la procédure d'installation pose ses questions
+   (options, mots de passe, nom du nœud, fuseau horaire) et redémarre.
+4. Une fois installé, `B DUA0` amorce OpenVMS; appuyez sur Retour pour l'invite
+   `Username:`. Sans clés de licence (PAK), OpenVMS permet la connexion sur le terminal
+   de la console (OPA0).
+
+Les mots de passe d'OpenVMS ne peuvent contenir que des lettres, des chiffres, `$` et `_`.
+
+## Écran graphique et DECwindows
+
+Le modèle **VAXstation 3900**, celui par défaut (section Machine), a une carte graphique
+monochrome QVSS de 1024 × 864, un clavier LK201 et une souris. Son onglet **Écran**, à
+côté de Console et Telnet, est celui où OpenVMS affiche DECwindows Motif. Les modèles
+MicroVAX 3900 et VAXserver 3900 n'ont pas d'écran graphique, donc pas de DECwindows.
+
+- La console (le ROM, l'amorçage, `OPA0`) reste dans l'onglet Console : seul DECwindows
+  utilise l'écran graphique.
+- Le modèle **VAXstation 3900/GPX** remplace cette carte par la carte **couleur** QDSS
+  (256 couleurs). La console reste aussi dans l'onglet Console : la carte est cachée au
+  ROM de la machine, qui sinon y déplacerait sa console, et OpenVMS la trouve à
+  l'amorçage. La page télécharge le ROM de la carte (`vcb02.bin`) du projet SIMH.
+- Cliquez dans l'écran pour y taper. Le pointeur du VAX suit celui de la page; les trois
+  boutons de la souris sont transmis.
+- Le verrouillage des majuscules agit sur les lettres sans être transmis au VAX, et les
+  touches tenues sont relâchées quand la page perd le clavier (Alt+Tab, capture d'écran) :
+  sinon DECwindows croirait Maj ou Alt enfoncée et ses fenêtres ne réagiraient plus aux clics.
+- **Coller** : Ctrl+V (Cmd+V sur Mac, ou Maj+Inser) dans l'écran, ou le bouton **Coller** à
+  côté des onglets, tape le texte du presse-papiers du PC au clavier du VAX, dans la
+  fenêtre qui a le focus (lettres accentuées sans leur accent). L'inverse, copier du VAX
+  vers le PC, n'est pas possible : passez par l'onglet Telnet ou la Console.
+- **Alt+F4** ferme une fenêtre de DECwindows, mais au clavier il ferme aussi le fureteur : la
+  page ne peut pas l'empêcher. Utilisez le bouton **Alt+F4** à côté des onglets, ou le bouton
+  **Plein écran** : là, Alt+F4, Alt+Tab et Échap vont au VAX (Chrome et Edge; tenir Échap
+  pour en sortir). La page demande aussi une confirmation avant de se fermer quand le VAX est
+  en marche.
+- Touches : F1 à F12, les flèches, Inser, Suppr, Début, Fin et Page préc./suiv. sont les
+  touches d'édition du LK201; Alt est Compose; Échap vaut F11.
+- OpenVMS doit être installé avec le support DECwindows (de base et station de travail)
+  et le produit DECwindows Motif, tous deux sur le CD d'OpenVMS VAX 7.1.
+- **Licences** : sans licence VAX-VMS enregistrée, DECwindows ne démarre pas seul à
+  l'amorçage (on le lance par `@SYS$MANAGER:DECW$STARTUP`), et sans licence DW-MOTIF la
+  session est refusée après la connexion. Enregistrez vos licences par
+  `@SYS$UPDATE:VMSLICENSE`.
+
+## Gestionnaire de fichiers
+
+L'icône du dossier, dans la barre du haut (ou le bouton **Fichiers** d'un lecteur, section
+Disques), ouvre les fichiers d'un disque OpenVMS sans passer par OpenVMS : la page lit
+elle-même le format du volume (Files-11 ODS-2) dans l'image.
+
+- **Lister et naviguer** : répertoires, filtre par nom, toutes les versions ou la dernière,
+  taille, date, propriétaire, protection.
+- **Ouvrir** : un fichier texte s'édite dans la page (l'enregistrement crée une nouvelle
+  version, comme sous VMS); un autre fichier montre ses premiers octets.
+- **Importer et exporter** des fichiers entre votre appareil et le disque (un texte devient
+  un fichier à enregistrements de longueur variable, le reste des blocs de 512 octets).
+- **Copier, couper, coller, renommer, effacer, purger**, créer un répertoire ou un fichier.
+- **Propriétés** : protection (système, propriétaire, groupe, monde), propriétaire (UIC),
+  limite de versions, format d'enregistrement.
+
+Le gestionnaire a deux façons de travailler :
+
+- **VAX éteint** (après un `SHUTDOWN`) : accès direct à l'image, toutes les opérations.
+- **VAX en marche** : lecture seule en accès direct (un disque qu'OpenVMS a monté est gardé
+  en partie en mémoire, et VMS réécrirait par-dessus). Le bouton **Modifier par
+  OpenVMS…** ouvre alors une session telnet cachée, avec le compte que vous donnez, et
+  fait faire chaque opération par OpenVMS lui-même (`DIRECTORY`, `TYPE`, `CREATE`, `COPY`,
+  `RENAME`, `DELETE`, `SET PROTECTION`…). Il faut TCP/IP en marche. Dans ce mode, seuls
+  les fichiers texte s'ouvrent, s'importent et s'exportent (lignes de 255 caractères au
+  plus); les fichiers binaires se transfèrent VAX éteint.
+
+Pour l'accès direct, chaque opération d'écriture a été
+vérifiée par `ANALYZE/DISK_STRUCTURE` d'OpenVMS; gardez tout de même une copie d'un disque
+auquel vous tenez (bouton de téléchargement du lecteur) avant de le modifier.
+
+## Comptes OpenVMS (AUTHORIZE)
+
+L'icône des personnes, dans la barre du haut, ouvre la fenêtre des **comptes OpenVMS** :
+toutes les opérations de l'utilitaire AUTHORIZE sans taper ses commandes. La page ouvre une
+session telnet cachée avec le compte que vous donnez (SYSTEM, ou un compte qui a SYSPRV)
+et fait faire chaque opération par OpenVMS lui-même (`MCR AUTHORIZE …`). Il faut le VAX en
+marche avec TCP/IP; le mot de passe sert à la connexion et n'est pas gardé.
+
+- **Comptes** : liste (`SHOW /BRIEF`), fiche complète (`SHOW`) à modifier dans un formulaire
+  (`MODIFY`, ou `DEFAULT` pour la fiche DEFAULT) : propriétaire, UIC, disque et répertoire,
+  CLI, procédure de connexion, mot de passe et sa durée, expiration, drapeaux, jours
+  principaux, heures d'accès par mode (réseau, lots, local, ligne commutée, distant),
+  quotas, privilèges autorisés et par défaut, identificateurs détenus. Nouveau compte
+  (`ADD`, à partir de DEFAULT mais actif et avec une UIC libre, avec la création de son
+  répertoire), activer ou désactiver (`DISUSER`), copie (`COPY`), renommage (`RENAME`),
+  suppression (`REMOVE`), listage (`LIST`). Depuis la fiche : modifier la procédure de
+  connexion du compte (`LOGIN.COM`, créée d'un modèle si elle n'existe pas).
+- **Groupes** : les groupes d'UIC (`[300,1]` : groupe 300) avec leurs comptes; nommer un
+  groupe (identificateur `[300,*]`), le renommer, retirer son nom; nouveau compte dans un
+  groupe; y déplacer un compte (`MODIFY /UIC`), ses fichiers suivant (`SET SECURITY/OWNER`).
+- **Droits des fichiers** : propriétaire et protection (Système, Propriétaire, Groupe,
+  Monde) d'un fichier ou d'un répertoire, au besoin de tout son contenu, et sa liste de
+  contrôle d'accès (ACL : ajouter ou retirer une entrée pour un compte, un groupe ou un
+  identificateur, `OPTIONS=DEFAULT` pour les nouveaux fichiers d'un répertoire).
+- **Identificateurs** : ajout, attributs, renommage, suppression, accorder et révoquer à un
+  compte (`ADD`, `MODIFY`, `RENAME`, `REMOVE`, `GRANT`, `REVOKE /IDENTIFIER`), détenteurs,
+  listage.
+- **Proxys** (DECnet) : création de la base (`CREATE /PROXY`), ajout, compte par défaut,
+  suppression, listage.
+- **Commande AUTHORIZE** : toute autre commande, telle que tapée à l'invite `UAF>`
+  (`CREATE /RIGHTS`, `MODIFY /SYSTEM_PASSWORD`, `ADD /IDENTIFIER /USER=*`, `HELP`…); sa
+  sortie s'affiche et se télécharge.
+
+## Réseau
+
+Le VAX a un contrôleur Ethernet DELQA (`XQA0`, adresse de station 08-00-2B-AA-BB-CC) sur
+un réseau virtuel privé : le VAX est **10.0.2.15** (masque 255.255.255.0) et une
+passerelle, **10.0.2.2**, répond à l'ARP et au ping. Il n'y a pas d'accès à Internet.
+
+La pile TCP/IP de Carnegie Mellon pour VMS, CMU-OpenVMS/IP V6.6-5, s'installe comme
+l'explique [ce guide d'OpenVMS Hobby](https://www.openvmshobby.com/vax-vms/carnegie-mellon-tcpip-vax/) :
+répondez `10.0.2.15`, `255.255.255.0` et `XQA0` aux questions de l'adresse, du masque et
+du périphérique. Elle démarre par `@SYS$MANAGER:IP_STARTUP`, et `IPACP: Network online`
+paraît à la console.
+
+## Licence et remerciements
+
+Licence Apache 2.0. Le processeur, la console et le contrôleur de disques sont une
+traduction en Rust de [SIMH](https://github.com/simh/simh) de Robert M Supnik, et son
+contrôleur Ethernet, du DELQA de SIMH de David T. Hittner (licences de type MIT, voir
+[NOTICE](NOTICE)). Terminal : [xterm.js](https://xtermjs.org/) (MIT).
+
+Le microprogramme et les logiciels de DEC (ROM de la console, diagnostics, OpenVMS) sont
+© Digital Equipment Corporation et ses successeurs; aucun ne fait partie de ce projet.
