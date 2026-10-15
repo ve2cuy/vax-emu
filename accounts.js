@@ -8,15 +8,15 @@
 // REVOKE, SHOW, LIST /IDENTIFIER), proxys (ADD, MODIFY, REMOVE, SHOW, LIST, CREATE /PROXY) et
 // une ligne de commande libre pour le reste (CREATE /RIGHTS, MODIFY /SYSTEM_PASSWORD, HELP…).
 
-import { t } from './i18n.js?v=12d3c04f';
-import { VmsSession, readText, saveText } from './vms-files.js?v=12d3c04f';
-import { askLogin } from './files.js?v=12d3c04f';
+import { t } from './i18n.js?v=6e904c77';
+import { VmsSession, readText, saveText } from './vms-files.js?v=6e904c77';
+import { askLogin } from './files.js?v=6e904c77';
 import {
   PRIVS, FLAGS, DAYS, MODES, QUOTAS, ID_ATTRS, fail, userName, idName, proxyName, password, uic, octal,
   idValue, isoDate, vmsDate, messages, parseBrief, parseUser, parseIdentifiers, parseRights, parseProxies,
   modifyQualifiers, packCommands, freeCommand, quoted, loginFile, groupOf, groupNames, nextMember, nextGroup,
   PROT_CLASSES, PROT_RIGHTS, ACE_ACCESS, securityTarget, parseSecurity, protectionText, ownerSpec, aceText, safeAce,
-} from './uaf.js?v=12d3c04f';
+} from './uaf.js?v=6e904c77';
 
 const ACC_CHANNEL = 2;   // canal TCP du fil de la machine réservé à cette session
 const PROTECTED = ['SYSTEM', 'DEFAULT'];

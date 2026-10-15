@@ -103,8 +103,9 @@ décompresse.
 
 Le relais *vax-bridge* tourne sur l'ordinateur où se trouve le fureteur. Il copie les
 trames Ethernet entre la page et une de vos cartes réseau : le VAX se retrouve sur votre
-réseau local avec sa propre adresse. Une carte filaire convient le mieux : bien des cartes
-et des bornes Wi-Fi écartent les trames d'une deuxième adresse de station.
+réseau local avec sa propre adresse. Une carte filaire convient le mieux : les bornes Wi-Fi
+écartent les trames d'une deuxième adresse de station. En Wi-Fi seulement, voir
+[Wi-Fi seulement](#wi-fi-seulement) plus bas.
 
 ### 1. Installer le relais
 
@@ -146,8 +147,7 @@ Téléchargez le fichier de votre système dans la page
    sudo ./vax-bridge --iface en0
    ```
 
-   Les versions macOS n'ont pas encore été essayées sur un vrai Mac; vos retours sont
-   bienvenus.
+   Essayé sur un MacBook Pro (Apple Silicon) en Wi-Fi, avec Chrome.
 
 Sur tous les systèmes, `--iface` reçoit le nom de la carte, l'adresse IPv4 de votre
 ordinateur sur cette carte, ou un morceau de la description de la carte;
@@ -195,9 +195,10 @@ dans un terminal.
 L'enregistrement crée la petite application `~/Applications/VAX Bridge.app`. À chaque
 lancement, macOS demande le mot de passe d'administrateur (le relais lit les cartes par
 `/dev/bpf*`). Le relais tourne en arrière-plan; son journal est `/tmp/vax-bridge.log`.
-Pour l'arrêter : `sudo pkill vax-bridge`. Pas encore essayé sur un vrai Mac.
+Pour l'arrêter : `sudo pkill vax-bridge`.
 
-Les options `--port`, `--telnet`, `--vax-ip` et `--origin` sont retenues elles aussi. Pour
+Les options `--port`, `--telnet`, `--listen`, `--vax-ip`, `--origin` et `--wifi` sont
+retenues elles aussi. Pour
 changer de carte, refaites `--install` avec la nouvelle. Pour tout retirer :
 `vax-bridge --uninstall`.
 
@@ -209,6 +210,10 @@ changer de carte, refaites `--install` avec la nouvelle. Pour tout retirer :
    appareil (accès au réseau local), acceptez.
 3. Allumez le VAX (le mode réseau s'applique à la mise sous tension). La section affiche
    « Branché au réseau local ».
+
+Utilisez Chrome, Edge ou Firefox. Safari refuse la connexion de la page https au relais
+(`ws://127.0.0.1`, non chiffré) : la page reste alors débranchée et le relais n'affiche
+rien.
 
 ### 3. Donner au VAX une adresse de votre réseau
 
@@ -223,8 +228,34 @@ des deux qui est installée.
 - Des **autres ordinateurs** du réseau : `ping 192.168.2.77`, `telnet 192.168.2.77`.
 - De l'**ordinateur qui fait tourner le relais** : `telnet localhost 2323`. Une carte ne
   reçoit pas les trames qu'elle émet elle-même : cet ordinateur ne peut donc pas
-  « pinger » le VAX à son adresse; le relais ouvre ce port local à la place.
+  « pinger » le VAX à son adresse; le relais ouvre ce port local à la place. Le relais
+  joint le VAX depuis l'adresse 10.0.3.2 : le VAX répond par sa passerelle par défaut,
+  qui doit donc être réglée.
 - Dans la page : l'onglet **Telnet**.
+
+### Wi-Fi seulement
+
+En Wi-Fi, la borne ne livre que les trames pour l'adresse de station de l'ordinateur : le
+VAX ne reçoit pas les réponses qui lui sont adressées (pas même la réponse ARP du routeur)
+et n'échange qu'un peu, mal, avec l'ordinateur du relais. Sans carte filaire, lancez le
+relais avec `--wifi`, et avec `--listen 0.0.0.0` pour que les autres ordinateurs
+joignent le VAX :
+
+```
+sudo ./vax-bridge --iface en0 --wifi --vax-ip 192.168.2.77 --listen 0.0.0.0
+```
+
+- `--wifi` : le relais répond lui-même aux demandes ARP du VAX (sauf pour les adresses de
+  l'ordinateur) : le VAX joint ainsi le relais par sa passerelle.
+- `--vax-ip` : un relais qui vient de démarrer ne connaît l'adresse du VAX qu'après avoir
+  vu une de ses trames; donnez-la ici.
+- `--listen 0.0.0.0` : le port telnet est ouvert au réseau. Des autres ordinateurs :
+  `telnet <adresse de l'ordinateur> 2323` (ex. `telnet 192.168.2.115 2323`); de
+  l'ordinateur lui-même, toujours `telnet localhost 2323`.
+
+Limites : on joint le VAX à l'adresse de l'ordinateur, pas à la sienne; seul le telnet
+suit; le VAX n'a pas accès à Internet. Le telnet n'est pas chiffré : ne l'ouvrez ainsi que
+sur un réseau de confiance.
 
 ### Options du relais
 
@@ -233,8 +264,10 @@ des deux qui est installée.
 | `--iface <carte>` | (obligatoire) | carte réseau : nom, adresse de l'hôte ou description; `?` les énumère |
 | `--port <n>` | 8023 | port du WebSocket de la page, sur 127.0.0.1 seulement |
 | `--telnet <n>` | 2323 | port local mené au telnet du VAX; 0 : aucun |
+| `--listen <a.b.c.d>` | 127.0.0.1 | adresse d'écoute de `--telnet`; 0.0.0.0 l'ouvre au réseau |
 | `--vax-ip <a.b.c.d>` | apprise | adresse du VAX pour `--telnet`, si elle n'est pas apprise de ses trames |
 | `--origin <url>` | | origine de page permise en plus de https://ve2cuy.github.io |
+| `--wifi` | | carte Wi-Fi : le relais répond à l'ARP du VAX (voir [Wi-Fi seulement](#wi-fi-seulement)) |
 
 ## Disques et OpenVMS
 

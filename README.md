@@ -95,8 +95,8 @@ from the repository can be imported as is: the page decompresses it.
 
 The *vax-bridge* relay runs on the computer where the browser is. It copies Ethernet
 frames between the page and one of your network cards, so the VAX sits on your local
-network with its own address. A wired card works best: many Wi-Fi cards and access points
-drop frames from a second station address.
+network with its own address. A wired card works best: Wi-Fi access points drop frames
+for a second station address. On Wi-Fi only, see [Wi-Fi only](#wi-fi-only) below.
 
 ### 1. Install the relay
 
@@ -138,7 +138,7 @@ Download the file for your system from the
    sudo ./vax-bridge --iface en0
    ```
 
-   The macOS builds have not been tried on a real Mac yet; reports are welcome.
+   Tried on a MacBook Pro (Apple Silicon) over Wi-Fi, with Chrome.
 
 On every system, `--iface` takes the card's name, your computer's IPv4 address on that
 card, or a piece of the card's description; `vax-bridge --iface "?"` lists the cards. Leave
@@ -184,9 +184,10 @@ password). The registration creates `~/.local/share/applications/vax-bridge.desk
 The registration creates the small application `~/Applications/VAX Bridge.app`. Each time
 it starts, macOS asks for the administrator password (the relay reads the cards through
 `/dev/bpf*`). The relay runs in the background; its log is `/tmp/vax-bridge.log`. To stop
-it: `sudo pkill vax-bridge`. Not tried on a real Mac yet.
+it: `sudo pkill vax-bridge`.
 
-The `--port`, `--telnet`, `--vax-ip` and `--origin` options are remembered too. To change
+The `--port`, `--telnet`, `--listen`, `--vax-ip`, `--origin` and `--wifi` options are
+remembered too. To change
 the card, run `--install` again with the new one. To remove everything:
 `vax-bridge --uninstall`.
 
@@ -198,6 +199,10 @@ the card, run `--install` again with the new one. To remove everything:
    access), allow it.
 3. Power the VAX on (the network mode takes effect at power-on). The section shows
    "Bridged to the local network".
+
+Use Chrome, Edge or Firefox. Safari refuses the connection from the https page to the relay
+(`ws://127.0.0.1`, unencrypted): the page then stays unconnected and the relay prints
+nothing.
 
 ### 3. Give the VAX an address of your network
 
@@ -212,8 +217,33 @@ installed.
 - From the **other computers** of the network: `ping 192.168.2.77`, `telnet 192.168.2.77`.
 - From the **computer that runs the relay**: `telnet localhost 2323`. A card does not
   receive the frames it sends itself, so this computer cannot ping the VAX at its address;
-  the relay opens this local port instead.
+  the relay opens this local port instead. The relay reaches the VAX from the address
+  10.0.3.2: the VAX answers through its default gateway, which must therefore be set.
 - In the page: the **Telnet** tab.
+
+### Wi-Fi only
+
+Over Wi-Fi, the access point only delivers frames for the computer's own station address:
+the VAX does not get the answers addressed to it (not even the router's ARP reply), so it
+can only exchange a little, unreliably, with the computer that runs the relay. Without a
+wired card, start the relay with `--wifi`, and with `--listen 0.0.0.0` so the other
+computers can reach the VAX:
+
+```
+sudo ./vax-bridge --iface en0 --wifi --vax-ip 192.168.2.77 --listen 0.0.0.0
+```
+
+- `--wifi`: the relay answers the VAX's ARP requests itself (except for the computer's own
+  addresses), so the VAX reaches the relay through its gateway.
+- `--vax-ip`: a relay that has just started does not know the VAX's address before seeing
+  one of its frames; give it here.
+- `--listen 0.0.0.0`: the telnet port is open to the network. From the other computers:
+  `telnet <computer's address> 2323` (e.g. `telnet 192.168.2.115 2323`); from the
+  computer itself, still `telnet localhost 2323`.
+
+Limits: the VAX is reached at the computer's address, not at its own; only telnet is
+forwarded; the VAX has no Internet access. Telnet is not encrypted: open it this way only
+on a network you trust.
 
 ### Relay options
 
@@ -222,8 +252,10 @@ installed.
 | `--iface <card>` | (required) | network card: name, host address or description; `?` lists them |
 | `--port <n>` | 8023 | port of the page's WebSocket, on 127.0.0.1 only |
 | `--telnet <n>` | 2323 | local port that leads to the VAX's telnet; 0 for none |
+| `--listen <a.b.c.d>` | 127.0.0.1 | address `--telnet` listens on; 0.0.0.0 opens it to the network |
 | `--vax-ip <a.b.c.d>` | learned | address of the VAX for `--telnet`, if it is not learned from its frames |
 | `--origin <url>` | | one more page origin allowed to connect, besides https://ve2cuy.github.io |
+| `--wifi` | | Wi-Fi card: the relay answers the VAX's ARP requests (see [Wi-Fi only](#wi-fi-only)) |
 
 ## Disks and OpenVMS
 
